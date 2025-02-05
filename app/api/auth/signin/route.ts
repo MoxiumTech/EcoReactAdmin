@@ -34,15 +34,48 @@ export async function POST(
       return new NextResponse("Invalid credentials", { status: 401 });
     }
 
-    // Get user's stores
+    console.log('[SIGNIN] Finding stores for user:', user.id);
+
+    // Get all accessible stores with full details
     const stores = await prismadb.store.findMany({
       where: {
-        userId: user.id
+        OR: [
+          { userId: user.id }, // Owned stores
+          {
+            roleAssignments: {
+              some: {
+                userId: user.id
+              }
+            }
+          } // Assigned stores
+        ]
       },
-      select: {
-        id: true
+      include: {
+        roleAssignments: {
+          where: {
+            userId: user.id
+          },
+          include: {
+            role: true
+          }
+        }
       }
     });
+
+    console.log('[SIGNIN] Found stores:', {
+      count: stores.length,
+      details: stores.map(store => ({
+        id: store.id,
+        name: store.name,
+        isOwner: store.userId === user.id,
+        roles: store.roleAssignments.map(ra => ra.role.name)
+      }))
+    });
+
+    if (stores.length === 0) {
+      console.log('[SIGNIN] No stores found for user');
+      return new NextResponse("No accessible stores found", { status: 403 });
+    }
 
     // Generate token
     const token = jwt.sign(
@@ -66,10 +99,15 @@ export async function POST(
       user: {
         id: user.id,
         name: user.name,
-        email: user.email,
-        role: 'admin'
+        email: user.email
       },
-      stores: stores.map(store => store.id)
+      stores: stores.map(store => ({
+        id: store.id,
+        name: store.name,
+        isOwner: store.userId === user.id,
+        roles: store.roleAssignments.map(ra => ra.role.name)
+      })),
+      defaultStoreId: stores[0].id // First store will be the default redirect target
     });
   } catch (error) {
     console.log('[SIGNIN]', error);

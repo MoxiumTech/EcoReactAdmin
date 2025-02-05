@@ -12,6 +12,19 @@ import getCustomersCount from "@/actions/get-customers-count";
 import { getGraphCustomers } from "@/actions/get-graph-customers";
 import prismadb from "@/lib/prismadb";
 import { getFormatter, formatPrice } from "@/lib/utils";
+import { Prisma } from "@prisma/client";
+import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+
+type StoreWithRoles = Prisma.StoreGetPayload<{
+  include: {
+    roleAssignments: {
+      include: {
+        role: true
+      }
+    }
+  }
+}>;
 
 interface DashboardPageProps {
   params: {
@@ -24,16 +37,99 @@ const DashboardPage: React.FC<DashboardPageProps> = async ({
 }) => {
   const { storeId } = await params;
   
-  // Fetch store settings first
+  // Get current admin session
+  const { getAdminSession } = await import("@/lib/auth");
+  const session = await getAdminSession();
+  const userId = session?.userId;
+
+  if (!userId) {
+    throw new Error("Unauthenticated");
+  }
+
+  console.log('[DASHBOARD] Attempting to find store with:', { userId, storeId });
+  
+  // Fetch store settings with access check and include relations for debugging
   const store = await prismadb.store.findFirst({
     where: {
-      id: storeId
+      id: storeId,
+      OR: [
+        { userId: userId },
+        {
+          roleAssignments: {
+            some: {
+              userId: userId
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      roleAssignments: {
+        where: {
+          userId: userId
+        },
+        include: {
+          role: true
+        }
+      }
     }
   });
 
+  console.log('[DASHBOARD] Raw store result:', { 
+    store,
+    hasStore: !!store,
+    roleAssignments: store?.roleAssignments,
+    roleAssignmentsLength: store?.roleAssignments?.length
+  });
+
   if (!store) {
-    throw new Error("Store not found");
+    console.log('[DASHBOARD] No store found. Checking if user has any accessible stores...');
+    
+    // Try to find any store where user has a role assignment
+    const storeWithRoleAssignment = await prismadb.store.findFirst({
+      where: {
+        roleAssignments: {
+          some: {
+            userId: userId
+          }
+        }
+      },
+      include: {
+        roleAssignments: {
+          where: {
+            userId: userId
+          },
+          include: {
+            role: true
+          }
+        }
+      }
+    });
+
+    console.log('[DASHBOARD] Store with role assignment check:', {
+      found: !!storeWithRoleAssignment,
+      storeId: storeWithRoleAssignment?.id,
+      roles: storeWithRoleAssignment?.roleAssignments.map(ra => ra.role.name)
+    });
+
+    if (!storeWithRoleAssignment) {
+      console.log('[DASHBOARD] No accessible stores found');
+      redirect('/signin');
+    }
+
+    // Redirect to the accessible store
+    const redirectUrl = `/${storeWithRoleAssignment.id}/overview`;
+    console.log('[DASHBOARD] Redirecting to:', redirectUrl);
+    redirect(redirectUrl);
   }
+
+  // Log successful access
+  console.log('[DASHBOARD] Store access granted:', {
+    userId,
+    storeName: store.name,
+    accessType: store.userId === userId ? 'owner' : 'staff',
+    roles: store.roleAssignments.map((ra: { role: { name: string } }) => ra.role.name)
+  });
 
   const formatter = getFormatter({
     currency: store.currency || 'USD',

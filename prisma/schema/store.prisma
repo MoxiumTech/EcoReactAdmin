@@ -2,6 +2,7 @@ model Store {
   id              String           @id @default(uuid())
   name            String
   userId          String
+  user            User             @relation("UserToStore", fields: [userId], references: [id])
   currency        String?          @default("USD")
   locale          String?          @default("en-US")
   domain          String?          @unique @db.Text

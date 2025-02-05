@@ -25,22 +25,50 @@ export async function POST(
       return new NextResponse("System not properly initialized", { status: 500 });
     }
 
+    console.log('[SIGNUP] Creating store for user:', user.id);
+    
     // Create a default store for the user
-    const store = await prismadb.store.create({
-      data: {
-        name: `${name}'s Store`,
-        userId: user.id,
-      }
-    });
+    let store;
+    try {
+      store = await prismadb.store.create({
+        data: {
+          name: `${name}'s Store`,
+          userId: user.id,
+        }
+      });
+      console.log('[SIGNUP] Store created successfully:', store.id);
+    } catch (storeError) {
+      console.error('[SIGNUP] Store creation error:', storeError);
+      return new NextResponse("Failed to create store", { status: 500 });
+    }
 
-    // Assign super admin role to user for this store
-    await prismadb.roleAssignment.create({
-      data: {
-        userId: user.id,
-        roleId: superAdminRole.id,
-        storeId: store.id,
+    if (!store) {
+      return new NextResponse("Failed to create store", { status: 500 });
+    }
+
+    console.log('[SIGNUP] Assigning super admin role');
+    try {
+      // Assign super admin role to user for this store
+      await prismadb.roleAssignment.create({
+        data: {
+          userId: user.id,
+          roleId: superAdminRole.id,
+          storeId: store.id,
+        }
+      });
+      console.log('[SIGNUP] Role assigned successfully');
+    } catch (roleError) {
+      console.error('[SIGNUP] Role assignment error:', roleError);
+      // Try to clean up the store if role assignment fails
+      try {
+        await prismadb.store.delete({
+          where: { id: store.id }
+        });
+      } catch (cleanupError) {
+        console.error('[SIGNUP] Failed to cleanup store after role assignment error:', cleanupError);
       }
-    });
+      return new NextResponse("Failed to assign role", { status: 500 });
+    }
 
     // Generate admin token
     const token = generateAdminToken(user);

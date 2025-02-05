@@ -42,14 +42,34 @@ export default function SignInPage() {
   const onSubmit = async (data: SignInFormValues) => {
     try {
       setLoading(true);
+      console.log('[SIGNIN_PAGE] Attempting signin...');
       const response = await axios.post('/api/auth/signin', data);
       
-      if (response.data.role === 'admin') {
-        router.push('/');
+      const { stores } = response.data;
+      console.log('[SIGNIN_PAGE] Signin successful:', { stores });
+
+      if (stores && stores.length > 0) {
+        const firstStore = stores[0];
+        console.log('[SIGNIN_PAGE] Found accessible store:', firstStore);
+        
+        // Construct the redirect URL with overview
+        const redirectTo = `/${firstStore.id}/overview`;
+        console.log('[SIGNIN_PAGE] Redirecting to:', redirectTo);
+
+        // First show the success message
+        toast.success(`Logged in as ${firstStore.roles[0]}`);
+
+        // Wait a bit for the toast to show before redirecting
+        setTimeout(() => {
+          // Use window.location for hard redirect
+          window.location.href = redirectTo;
+        }, 500);
+      } else {
+        toast.error('No accessible stores found.');
+        setTimeout(() => {
+          window.location.href = '/';
+        }, 500);
       }
-      
-      toast.success('Logged in successfully.');
-      router.refresh();
     } catch (error) {
       toast.error('Invalid credentials.');
     } finally {

@@ -40,7 +40,41 @@ type RouteItem = {
   items?: MenuItem[];
 };
 
-export function useRouteItems() {
+interface UseRouteItemsProps {
+  isOwner: boolean;
+  role?: {
+    name: string;
+    id: string;
+    description?: string | null;
+  };
+}
+
+// Helper function to check if a user has access to a route
+function hasRouteAccess(route: string, isOwner: boolean, roleName?: string): boolean {
+  if (isOwner) return true;
+
+  // Staff with Store Manager role has access to most features except staff management
+  if (roleName === 'Store Manager') {
+    const restrictedRoutes = ['/staff', '/roles'];
+    return !restrictedRoutes.some(restricted => route.includes(restricted));
+  }
+
+  // Inventory Manager can only access inventory-related routes
+  if (roleName === 'Inventory Manager') {
+    const allowedRoutes = ['/products', '/stock-items', '/stock-movements', '/suppliers'];
+    return allowedRoutes.some(allowed => route.includes(allowed));
+  }
+
+  // Content Manager can only access content-related routes
+  if (roleName === 'Content Manager') {
+    const allowedRoutes = ['/layouts', '/billboards', '/taxonomies', '/taxons'];
+    return allowedRoutes.some(allowed => route.includes(allowed));
+  }
+
+  return false;
+}
+
+export function useRouteItems({ isOwner, role }: UseRouteItemsProps) {
   const pathname = usePathname();
   const params = useParams();
 
@@ -215,7 +249,39 @@ export function useRouteItems() {
     },
   ];
 
-  return routes;
+  // Filter and transform routes based on user role
+  return routes.reduce<RouteItem[]>((acc, route) => {
+    // Always allow overview for everyone
+    if (route.href?.endsWith(`/${params.storeId}`)) {
+      acc.push(route);
+      return acc;
+    }
+
+    // If it's a single route
+    if (route.href) {
+      if (hasRouteAccess(route.href, isOwner, role?.name)) {
+        acc.push(route);
+      }
+      return acc;
+    }
+    
+    // If it has subitems, filter those
+    if (route.items) {
+      const accessibleItems = route.items.filter(item => 
+        hasRouteAccess(item.href, isOwner, role?.name)
+      );
+      
+      // Only include the category if it has accessible items
+      if (accessibleItems.length > 0) {
+        acc.push({
+          ...route,
+          items: accessibleItems
+        });
+      }
+    }
+    
+    return acc;
+  }, []);
 }
 
 export type { MenuItem, RouteItem };

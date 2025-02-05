@@ -1,6 +1,6 @@
 "use client";
 
-import { Store } from "@prisma/client";
+import { Role, Store } from "@prisma/client";
 import { Sidebar } from "@/components/sidebar";
 import { useSidebarState } from '@/hooks/use-sidebar-state';
 import { cn } from "@/lib/utils";
@@ -8,16 +8,38 @@ import { cn } from "@/lib/utils";
 interface ClientLayoutProps {
   children: React.ReactNode;
   params: { storeId: string };
-  store: Store | null;
-  stores: any[];
+  store: Store & {
+    roleAssignments: Array<{
+      role: Role;
+    }>;
+  };
+  stores: Array<Store & {
+    roleAssignments: Array<{
+      role: Role;
+    }>;
+  }>;
+  isOwner: boolean;
+  role?: Role;
 }
 
-export function ClientLayout({ children, params, store, stores }: ClientLayoutProps) {
+export function ClientLayout({ 
+  children, 
+  params, 
+  store, 
+  stores,
+  isOwner,
+  role 
+}: ClientLayoutProps) {
   const { isCollapsed } = useSidebarState();
 
   return (
     <div className="relative min-h-screen bg-background">
-      <Sidebar store={store} stores={stores} />
+      <Sidebar 
+        store={store} 
+        stores={stores}
+        isOwner={isOwner}
+        role={role}
+      />
       <main 
         className={cn(
           "min-h-screen w-full",

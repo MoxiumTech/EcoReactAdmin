@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Store } from "@prisma/client";
+import { Role, Store } from "@prisma/client";
 import { Menu, ChevronRight, LogOut } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import StoreSwitcher from "@/components/store-switcher";
@@ -16,15 +16,25 @@ import { Separator } from "@/components/ui/separator";
 import { useSidebarState } from "@/hooks/use-sidebar-state";
 
 interface SidebarProps {
-  store: Store | null;
-  stores: any[];
+  store: Store & {
+    roleAssignments: Array<{
+      role: Role;
+    }>;
+  };
+  stores: Array<Store & {
+    roleAssignments: Array<{
+      role: Role;
+    }>;
+  }>;
+  isOwner: boolean;
+  role?: Role;
 }
 
-export function Sidebar({ store, stores }: SidebarProps) {
+export function Sidebar({ store, stores, isOwner, role }: SidebarProps) {
   const router = useRouter();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
-  const routes = useRouteItems();
+  const routes = useRouteItems({ isOwner, role });
   const { isCollapsed, setIsCollapsed } = useSidebarState();
 
   useEffect(() => {
