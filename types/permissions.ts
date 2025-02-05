@@ -1,77 +1,81 @@
-export const Permissions = {
-  // Catalog Structure permissions
-  VIEW_TAXONOMIES: 'taxonomies:view',
-  MANAGE_TAXONOMIES: 'taxonomies:manage',
-  VIEW_TAXONS: 'taxons:view',
-  MANAGE_TAXONS: 'taxons:manage',
+export enum Permissions {
+  // Catalog Management
+  VIEW_PRODUCTS = "VIEW_PRODUCTS",
+  CREATE_PRODUCTS = "CREATE_PRODUCTS",
+  EDIT_PRODUCTS = "EDIT_PRODUCTS",
+  DELETE_PRODUCTS = "DELETE_PRODUCTS",
 
-  // Product permissions
-  VIEW_PRODUCTS: 'products:view',
-  CREATE_PRODUCTS: 'products:create',
-  EDIT_PRODUCTS: 'products:edit',
-  DELETE_PRODUCTS: 'products:delete',
+  VIEW_VARIANTS = "VIEW_VARIANTS",
+  CREATE_VARIANTS = "CREATE_VARIANTS",
+  EDIT_VARIANTS = "EDIT_VARIANTS",
+  DELETE_VARIANTS = "DELETE_VARIANTS",
 
-  // Variant permissions
-  VIEW_VARIANTS: 'variants:view',
-  CREATE_VARIANTS: 'variants:create',
-  EDIT_VARIANTS: 'variants:edit',
-  DELETE_VARIANTS: 'variants:delete',
+  VIEW_ATTRIBUTES = "VIEW_ATTRIBUTES",
+  MANAGE_ATTRIBUTES = "MANAGE_ATTRIBUTES",
 
-  // Order permissions
-  VIEW_ORDERS: 'orders:view',
-  MANAGE_ORDERS: 'orders:manage',
-  
-  // Customer permissions
-  VIEW_CUSTOMERS: 'customers:view',
-  MANAGE_CUSTOMERS: 'customers:manage',
-  
-  // Settings permissions
-  VIEW_SETTINGS: 'settings:view',
-  MANAGE_SETTINGS: 'settings:manage',
-  
-  // Role management permissions
-  VIEW_ROLES: 'roles:view',
-  MANAGE_ROLES: 'roles:manage',
-  
-  // Attribute permissions
-  VIEW_ATTRIBUTES: 'attributes:view',
-  MANAGE_ATTRIBUTES: 'attributes:manage',
-  VIEW_OPTION_TYPES: 'option-types:view',
-  MANAGE_OPTION_TYPES: 'option-types:manage',
+  VIEW_OPTION_TYPES = "VIEW_OPTION_TYPES",
+  MANAGE_OPTION_TYPES = "MANAGE_OPTION_TYPES",
 
-  // Supplier permissions
-  VIEW_SUPPLIERS: 'suppliers:view',
-  MANAGE_SUPPLIERS: 'suppliers:manage',
+  // Categories & Navigation
+  VIEW_TAXONOMIES = "VIEW_TAXONOMIES",
+  MANAGE_TAXONOMIES = "MANAGE_TAXONOMIES",
+  VIEW_TAXONS = "VIEW_TAXONS",
+  MANAGE_TAXONS = "MANAGE_TAXONS",
 
-  // Store management permissions
-  VIEW_STORE: 'store:view',
-  MANAGE_STORE: 'store:manage',
-  
-  // Content permissions
-  VIEW_LAYOUTS: 'layouts:view',
-  MANAGE_LAYOUTS: 'layouts:manage',
-  VIEW_BILLBOARDS: 'billboards:view',
-  MANAGE_BILLBOARDS: 'billboards:manage',
-  VIEW_REVIEWS: 'reviews:view',
-  MANAGE_REVIEWS: 'reviews:manage',
-  
-  // Category permissions
-  VIEW_CATEGORIES: 'categories:view',
-  MANAGE_CATEGORIES: 'categories:manage',
-  
-  // Brand permissions
-  VIEW_BRANDS: 'brands:view',
-  MANAGE_BRANDS: 'brands:manage',
-  
-  // Stock permissions
-  VIEW_STOCK: 'stock:view',
-  MANAGE_STOCK: 'stock:manage',
-  VIEW_STOCK_MOVEMENTS: 'stock-movements:view',
-  MANAGE_STOCK_MOVEMENTS: 'stock-movements:manage',
+  // Content Management
+  VIEW_BILLBOARDS = "VIEW_BILLBOARDS",
+  MANAGE_BILLBOARDS = "MANAGE_BILLBOARDS",
 
-  // Analytics permissions
-  VIEW_ANALYTICS: 'analytics:view',
-  MANAGE_ANALYTICS: 'analytics:manage',
-} as const;
+  VIEW_COLORS = "VIEW_COLORS",
+  MANAGE_COLORS = "MANAGE_COLORS",
 
-export type PermissionValue = typeof Permissions[keyof typeof Permissions];
+  VIEW_SIZES = "VIEW_SIZES",
+  MANAGE_SIZES = "MANAGE_SIZES",
+
+  // Order Management
+  VIEW_ORDERS = "VIEW_ORDERS",
+  MANAGE_ORDERS = "MANAGE_ORDERS",
+
+  // Inventory Management
+  VIEW_STOCK = "VIEW_STOCK",
+  MANAGE_STOCK = "MANAGE_STOCK",
+  VIEW_STOCK_MOVEMENTS = "VIEW_STOCK_MOVEMENTS",
+  MANAGE_STOCK_MOVEMENTS = "MANAGE_STOCK_MOVEMENTS",
+
+  // Customer Management
+  VIEW_CUSTOMERS = "VIEW_CUSTOMERS",
+  MANAGE_CUSTOMERS = "MANAGE_CUSTOMERS",
+
+  // Supplier Management
+  VIEW_SUPPLIERS = "VIEW_SUPPLIERS",
+  MANAGE_SUPPLIERS = "MANAGE_SUPPLIERS",
+
+  // Analytics & Reviews
+  VIEW_ANALYTICS = "VIEW_ANALYTICS",
+  MANAGE_ANALYTICS = "MANAGE_ANALYTICS",
+  VIEW_REVIEWS = "VIEW_REVIEWS",
+  MANAGE_REVIEWS = "MANAGE_REVIEWS",
+
+  // Store Management
+  VIEW_SETTINGS = "VIEW_SETTINGS",
+  MANAGE_SETTINGS = "MANAGE_SETTINGS",
+  VIEW_STORE = "VIEW_STORE",
+  MANAGE_STORE = "MANAGE_STORE",
+
+  // Staff & Roles Management
+  VIEW_STAFF = "VIEW_STAFF",
+  MANAGE_STAFF = "MANAGE_STAFF",
+  VIEW_ROLES = "VIEW_ROLES",
+  MANAGE_ROLES = "MANAGE_ROLES",
+
+  // Brand Management
+  VIEW_BRANDS = "VIEW_BRANDS",
+  MANAGE_BRANDS = "MANAGE_BRANDS",
+
+  // Layout Management
+  VIEW_LAYOUTS = "VIEW_LAYOUTS",
+  MANAGE_LAYOUTS = "MANAGE_LAYOUTS",
+
+  // Documentation Access
+  VIEW_DOCUMENTATION = "VIEW_DOCUMENTATION"
+}
