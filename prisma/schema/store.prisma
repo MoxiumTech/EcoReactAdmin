@@ -28,6 +28,7 @@ model Store {
   homeLayouts     HomeLayout[]     @relation("StoreToHomeLayout")
   roleAssignments RoleAssignment[] @relation("StoreToRoleAssignment")
   staffInvitations StaffInvitation[] @relation("StoreToStaffInvitation")
+  roles           Role[]           @relation("StoreToRole")
 
   @@index([userId])
 }

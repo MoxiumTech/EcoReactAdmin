@@ -144,7 +144,7 @@ export default function AcceptInvitePage() {
         <div className="text-center space-y-2">
           <h2 className="text-2xl font-bold">Accept Invitation</h2>
           <p className="text-muted-foreground">
-            You've been invited to join {inviteInfo.storeName} as {inviteInfo.roleName}
+            You&apos;ve been invited to join {inviteInfo.storeName} as {inviteInfo.roleName}
           </p>
           <p className="text-sm text-muted-foreground">
             Email: {inviteInfo.email}

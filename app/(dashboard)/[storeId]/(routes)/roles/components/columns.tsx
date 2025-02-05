@@ -18,10 +18,15 @@ export type RoleColumn = {
   name: string;
   description: string;
   permissions: string[];
+  isDefault: boolean;
   createdAt: string;
 };
 
-export const columns: ColumnDef<RoleColumn>[] = [
+interface ColumnProps {
+  isOwner: boolean;
+}
+
+export const createColumns = ({ isOwner }: ColumnProps): ColumnDef<RoleColumn>[] => [
   {
     accessorKey: "name",
     header: "Name",
@@ -64,7 +69,7 @@ export const columns: ColumnDef<RoleColumn>[] = [
   {
     id: "actions",
     cell: ({ row }) => {
-      return <CellAction data={row.original} />;
+      return <CellAction data={row.original} isOwner={isOwner} />;
     },
   },
 ];

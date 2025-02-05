@@ -11,13 +11,18 @@ model User {
 
 model Role {
   id                String            @id @default(uuid())
-  name              String            @unique
+  name              String
   description       String?
+  storeId           String
+  store             Store             @relation("StoreToRole", fields: [storeId], references: [id], onDelete: Cascade)
   permissions       Permission[]      @relation("RoleToPermission")
   roleAssignments   RoleAssignment[]  @relation("RoleToAssignment")
   staffInvitations  StaffInvitation[]
   createdAt         DateTime          @default(now())
   updatedAt         DateTime          @updatedAt
+
+  @@unique([name, storeId])
+  @@index([storeId])
 }
 
 model Permission {

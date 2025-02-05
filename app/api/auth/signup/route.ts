@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createUser, generateAdminToken } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
+import { initializeStoreRoles } from "@/lib/init-store-roles";
 
 export async function POST(
   req: Request,
@@ -16,58 +17,52 @@ export async function POST(
     // Create the user
     const user = await createUser(email, password, name);
 
-    // Get super admin role
-    const superAdminRole = await prismadb.role.findFirst({
-      where: { name: "Super Admin" } // This name matches DefaultRoles.SUPER_ADMIN.name
-    });
-
-    if (!superAdminRole) {
-      return new NextResponse("System not properly initialized", { status: 500 });
-    }
-
     console.log('[SIGNUP] Creating store for user:', user.id);
     
-    // Create a default store for the user
+    // Create store and initialize roles in a transaction
     let store;
     try {
-      store = await prismadb.store.create({
-        data: {
-          name: `${name}'s Store`,
-          userId: user.id,
-        }
-      });
-      console.log('[SIGNUP] Store created successfully:', store.id);
-    } catch (storeError) {
-      console.error('[SIGNUP] Store creation error:', storeError);
-      return new NextResponse("Failed to create store", { status: 500 });
-    }
-
-    if (!store) {
-      return new NextResponse("Failed to create store", { status: 500 });
-    }
-
-    console.log('[SIGNUP] Assigning super admin role');
-    try {
-      // Assign super admin role to user for this store
-      await prismadb.roleAssignment.create({
-        data: {
-          userId: user.id,
-          roleId: superAdminRole.id,
-          storeId: store.id,
-        }
-      });
-      console.log('[SIGNUP] Role assigned successfully');
-    } catch (roleError) {
-      console.error('[SIGNUP] Role assignment error:', roleError);
-      // Try to clean up the store if role assignment fails
-      try {
-        await prismadb.store.delete({
-          where: { id: store.id }
+      store = await prismadb.$transaction(async (tx) => {
+        // Create the store
+        const newStore = await tx.store.create({
+          data: {
+            name: `${name}'s Store`,
+            userId: user.id,
+          }
         });
-      } catch (cleanupError) {
-        console.error('[SIGNUP] Failed to cleanup store after role assignment error:', cleanupError);
-      }
-      return new NextResponse("Failed to assign role", { status: 500 });
+        console.log('[SIGNUP] Store created successfully:', newStore.id);
+
+        // Initialize roles for the new store
+        await initializeStoreRoles(tx, newStore.id);
+        console.log('[SIGNUP] Store roles initialized');
+
+        // Get the Store Admin role for this store
+        const storeAdminRole = await tx.role.findFirst({
+          where: {
+            name: 'Store Admin',
+            storeId: newStore.id
+          }
+        });
+
+        if (!storeAdminRole) {
+          throw new Error('Failed to initialize store roles');
+        }
+
+        // Assign Store Admin role to user
+        await tx.roleAssignment.create({
+          data: {
+            userId: user.id,
+            roleId: storeAdminRole.id,
+            storeId: newStore.id,
+          }
+        });
+        console.log('[SIGNUP] Role assigned successfully');
+
+        return newStore;
+      });
+    } catch (error) {
+      console.error('[SIGNUP] Store creation/role assignment error:', error);
+      return new NextResponse("Failed to initialize store", { status: 500 });
     }
 
     // Generate admin token

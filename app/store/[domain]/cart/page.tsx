@@ -17,7 +17,7 @@ export default function CartPage() {
   useEffect(() => {
     // Initialize cart data
     cart.fetchCart();
-  }, [cart.fetchCart]);
+  }, [cart]);
 
   if (cart.isLoading) {
     return (

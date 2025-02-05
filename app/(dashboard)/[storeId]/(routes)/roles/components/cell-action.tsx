@@ -20,10 +20,12 @@ import { useRBAC, Permissions } from "@/hooks/use-rbac";
 
 interface CellActionProps {
   data: RoleColumn;
+  isOwner: boolean;
 }
 
 export const CellAction: React.FC<CellActionProps> = ({
   data,
+  isOwner
 }) => {
   const router = useRouter();
   const params = useParams();
@@ -78,7 +80,7 @@ export const CellAction: React.FC<CellActionProps> = ({
           <DropdownMenuItem onClick={() => onCopy(data.id)}>
             <Copy className="mr-2 h-4 w-4" /> Copy Id
           </DropdownMenuItem>
-          {hasPermission(Permissions.MANAGE_ROLES) && (
+          {(isOwner || hasPermission(Permissions.MANAGE_ROLES)) && (
             <>
               <DropdownMenuItem
                 onClick={() => router.push(`/${params.storeId}/roles/${data.id}`)}
