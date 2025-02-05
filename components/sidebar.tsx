@@ -87,7 +87,11 @@ export function Sidebar({ store, stores, isOwner, role }: SidebarProps) {
             "bg-gradient-to-r from-primary/5 to-background",
             "border-b border-border/40"
           )}>
-            {!isCollapsed && <StoreSwitcher items={stores} />}
+            {!isCollapsed && (
+              <div className="flex items-center justify-between w-full">
+                <StoreSwitcher items={stores} disabled={!isOwner} />
+              </div>
+            )}
             {isCollapsed && store && (
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <span className="text-lg font-semibold text-primary">
@@ -271,6 +275,22 @@ export function Sidebar({ store, stores, isOwner, role }: SidebarProps) {
               </nav>
             </div>
             
+            {/* User Role Information */}
+            {!isCollapsed && (
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/50">
+                  <span className="text-xs text-muted-foreground">
+                    {isOwner ? 'Owner' : role?.name || 'Staff'}
+                  </span>
+                  {!isOwner && (
+                    <span className="text-xs text-muted-foreground">
+                      • {store.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Bottom controls */}
             <div className="border-t border-border/40 bg-muted/5">
               <div className={cn(
