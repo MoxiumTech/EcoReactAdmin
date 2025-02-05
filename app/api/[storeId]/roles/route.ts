@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getAdminSession } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
 import { getUserPermissions } from "@/lib/rbac-middleware";
-import { Permissions } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 
 export async function POST(
   req: Request,

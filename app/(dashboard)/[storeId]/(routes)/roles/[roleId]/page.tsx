@@ -11,7 +11,7 @@ import { Separator } from "@/components/ui/separator";
 import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Loader2 } from "lucide-react";
-import { Permissions } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 
 interface RoleFormData {
   name: string;

@@ -3,7 +3,8 @@
 import { usePathname, useParams } from "next/navigation";
 import { LucideIcon } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useRBAC, Permissions } from "@/hooks/use-rbac";
+import { useRBAC } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 import {
   LayoutDashboard,
   Package,
@@ -51,49 +52,49 @@ interface UseRouteItemsProps {
   };
 }
 
+// Map routes to required permissions
+const routePermissions: Record<string, string> = {
+  // Catalog
+  '/taxonomies': Permissions.VIEW_TAXONOMIES,
+  '/taxons': Permissions.VIEW_TAXONS,
+  '/products': Permissions.VIEW_PRODUCTS,
+  '/variants': Permissions.VIEW_VARIANTS,
+  '/brands': Permissions.VIEW_BRANDS,
+  '/suppliers': Permissions.VIEW_SUPPLIERS,
+  
+  // Attributes & Properties
+  '/attributes': Permissions.VIEW_ATTRIBUTES,
+  '/attribute-values': Permissions.VIEW_ATTRIBUTES,
+  '/option-types': Permissions.VIEW_OPTION_TYPES,
+  
+  // Inventory
+  '/stock-items': Permissions.VIEW_STOCK,
+  '/stock-movements': Permissions.VIEW_STOCK_MOVEMENTS,
+  
+  // Sales
+  '/orders': Permissions.VIEW_ORDERS,
+  '/customers': Permissions.VIEW_CUSTOMERS,
+  
+  // Content
+  '/layouts': Permissions.VIEW_LAYOUTS,
+  '/billboards': Permissions.VIEW_BILLBOARDS,
+  '/reviews': Permissions.VIEW_REVIEWS,
+  
+  // Documentation
+  '/documentation': Permissions.VIEW_STORE,
+  
+  // Settings
+  '/settings': Permissions.VIEW_SETTINGS,
+  '/staff': Permissions.MANAGE_ROLES,
+  '/roles': Permissions.MANAGE_ROLES,
+  
+  // Analytics (for future use)
+  '/analytics': Permissions.VIEW_ANALYTICS
+};
+
 // Helper function to check if a user has access to a route based on permissions
 function hasRouteAccess(route: string, isOwner: boolean, hasPermission: (permission: string) => boolean): boolean {
   if (isOwner) return true;
-
-  // Map routes to required permissions
-  const routePermissions: Record<string, string> = {
-    // Catalog
-    '/taxonomies': Permissions.VIEW_TAXONOMIES,
-    '/taxons': Permissions.VIEW_TAXONS,
-    '/products': Permissions.VIEW_PRODUCTS,
-    '/variants': Permissions.VIEW_VARIANTS,
-    '/brands': Permissions.VIEW_BRANDS,
-    '/suppliers': Permissions.VIEW_SUPPLIERS,
-    
-    // Attributes & Properties
-    '/attributes': Permissions.VIEW_ATTRIBUTES,
-    '/attribute-values': Permissions.VIEW_ATTRIBUTES,
-    '/option-types': Permissions.VIEW_OPTION_TYPES,
-    
-    // Inventory
-    '/stock-items': Permissions.VIEW_STOCK,
-    '/stock-movements': Permissions.VIEW_STOCK_MOVEMENTS,
-    
-    // Sales
-    '/orders': Permissions.VIEW_ORDERS,
-    '/customers': Permissions.VIEW_CUSTOMERS,
-    
-    // Content
-    '/layouts': Permissions.VIEW_LAYOUTS,
-    '/billboards': Permissions.VIEW_BILLBOARDS,
-    '/reviews': Permissions.VIEW_REVIEWS,
-    
-    // Documentation
-    '/documentation': Permissions.VIEW_STORE,
-    
-    // Settings
-    '/settings': Permissions.VIEW_SETTINGS,
-    '/staff': Permissions.MANAGE_ROLES,
-    '/roles': Permissions.MANAGE_ROLES,
-    
-    // Analytics (for future use)
-    '/analytics': Permissions.VIEW_ANALYTICS
-  };
 
   // Find matching route permission
   for (const [routePath, permission] of Object.entries(routePermissions)) {

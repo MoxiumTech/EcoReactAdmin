@@ -4,8 +4,9 @@ import prismadb from "@/lib/prismadb";
 import { Prisma } from "@prisma/client";
 import { RoleClient } from "./components/client";
 import { getUserPermissions } from "@/lib/rbac-middleware";
-import { Permissions } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 import { RoleColumn } from "./components/columns";
+import { PermissionGate } from "@/components/auth/permission-gate";
 
 export default async function RolesPage({
   params
@@ -61,15 +62,17 @@ export default async function RolesPage({
   }));
 
   return (
-    <div className="flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <RoleClient 
-          data={formattedRoles} 
-          canManage={canManageRoles}
-          isOwner={isOwner}
-          description="Manage staff roles and their permissions. Click the eye icon to see detailed access information for each role."
-        />
+    <PermissionGate permission={Permissions.VIEW_ROLES}>
+      <div className="flex-col">
+        <div className="flex-1 space-y-4 p-8 pt-6">
+          <RoleClient 
+            data={formattedRoles} 
+            canManage={canManageRoles}
+            isOwner={isOwner}
+            description="Manage staff roles and their permissions. Click the eye icon to see detailed access information for each role."
+          />
+        </div>
       </div>
-    </div>
+    </PermissionGate>
   );
 }

@@ -31,11 +31,15 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Spinner } from "@/components/ui/spinner";
 
-import { columns } from "./columns";
+import { getColumns } from "./columns";
 import { ProductColumn } from "./columns";
 import { useParams } from "next/navigation";
 
-export function ProductsTableShell() {
+interface ProductsTableShellProps {
+  canManage: boolean;
+}
+
+export function ProductsTableShell({ canManage }: ProductsTableShellProps) {
   const params = useParams();
   const [loading, setLoading] = React.useState(true);
   const [data, setData] = React.useState<ProductColumn[]>([]);
@@ -43,6 +47,8 @@ export function ProductsTableShell() {
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([]);
   const [columnVisibility, setColumnVisibility] = React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+
+  const columns = React.useMemo(() => getColumns(canManage), [canManage]);
 
   React.useEffect(() => {
     const fetchProducts = async () => {

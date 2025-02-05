@@ -1,36 +1,43 @@
-"use client";
+import { getAdminSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { Permissions } from "@/types/permissions";
+import { getUserPermissions } from "@/lib/rbac-middleware";
+import prismadb from "@/lib/prismadb";
+import { PermissionGate } from "@/components/auth/permission-gate";
+import { ProductsContent } from "./components/products-content";
 
-import { Plus } from "lucide-react";
-import { useParams, useRouter } from "next/navigation";
+export default async function ProductsPage({
+  params
+}: {
+  params: { storeId: string }
+}) {
+  const session = await getAdminSession();
 
-import { Button } from "@/components/ui/button";
-import { Heading } from "@/components/ui/heading";
-import { Separator } from "@/components/ui/separator";
+  if (!session) {
+    redirect('/signin');
+  }
 
-import { ProductsTableShell } from "./components/products-table-shell";
+  // Check if user is store owner and get their permissions
+  const [store, userPermissions] = await Promise.all([
+    prismadb.store.findFirst({
+      where: {
+        id: params.storeId,
+        userId: session.userId,
+      }
+    }),
+    getUserPermissions(session.userId, params.storeId)
+  ]);
 
-export default function ProductsPage() {
-  const router = useRouter();
-  const params = useParams();
+  const isOwner = !!store;
+  const canManageProducts = isOwner || userPermissions.includes(Permissions.CREATE_PRODUCTS);
 
   return (
-    <div className="flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <div className="flex items-center justify-between">
-          <Heading
-            title="Products"
-            description="Manage your product catalog"
-          />
-          <Button
-            onClick={() => router.push(`/${params.storeId}/products/new`)}
-          >
-            <Plus className="mr-2 h-4 w-4" />
-            Add Product
-          </Button>
+    <PermissionGate permission={Permissions.VIEW_PRODUCTS}>
+      <div className="flex-col">
+        <div className="flex-1 space-y-4 p-8 pt-6">
+          <ProductsContent canManage={canManageProducts} />
         </div>
-        <Separator />
-        <ProductsTableShell />
       </div>
-    </div>
+    </PermissionGate>
   );
 }

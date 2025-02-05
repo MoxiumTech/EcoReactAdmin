@@ -13,10 +13,12 @@ import { BrandColumn, columns } from "./columns";
 
 interface BrandsClientProps {
   data: BrandColumn[];
+  canManage: boolean;
 }
 
 export const BrandsClient: React.FC<BrandsClientProps> = ({
-  data
+  data,
+  canManage
 }) => {
   const router = useRouter();
   const params = useParams();
@@ -28,16 +30,22 @@ export const BrandsClient: React.FC<BrandsClientProps> = ({
           title={`Brands (${data.length})`}
           description="Manage brands for your store"
         />
-        <Button onClick={() => router.push(`/${params.storeId}/brands/new`)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add New
-        </Button>
+        {canManage && (
+          <Button onClick={() => router.push(`/${params.storeId}/brands/new`)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add New
+          </Button>
+        )}
       </div>
       <Separator />
       <DataTable searchKey="name" columns={columns} data={data} />
-      <Heading title="API" description="API calls for Brands" />
-      <Separator />
-      <ApiList entityName="brands" entityIdName="brandId" />
+      {canManage && (
+        <>
+          <Heading title="API" description="API calls for Brands" />
+          <Separator />
+          <ApiList entityName="brands" entityIdName="brandId" />
+        </>
+      )}
     </>
   );
-}; 
+};

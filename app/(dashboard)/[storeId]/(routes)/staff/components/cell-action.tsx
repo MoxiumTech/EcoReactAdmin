@@ -16,7 +16,8 @@ import {
 import { AlertModal } from "@/components/modals/alert-modal";
 
 import { StaffColumn } from "./columns";
-import { useRBAC, Permissions } from "@/hooks/use-rbac";
+import { useRBAC } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 
 interface CellActionProps {
   data: StaffColumn;

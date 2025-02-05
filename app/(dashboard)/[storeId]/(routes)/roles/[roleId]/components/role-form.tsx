@@ -21,7 +21,7 @@ import { Separator } from "@/components/ui/separator";
 import { Heading } from "@/components/ui/heading";
 import { AlertModal } from "@/components/modals/alert-modal";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Permissions } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 
 const formSchema = z.object({
   name: z.string().min(1),

@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextResponse } from 'next/server';
+import type { NextRequest } from 'next/server';
+import { getRequiredPermissionForRoute, withPermissionCheck } from '@/lib/permission-middleware';
 
 // List of public routes that don't require authentication
 const publicRoutes = ['/signin', '/signup', '/accept-invite'];
@@ -9,7 +10,8 @@ const apiAuthRoutes = [
   '/api/auth/signup',
   '/api/staff/verify-invite',
   '/api/staff/accept-invite',
-  '/api/staff/debug-invite'
+  '/api/staff/debug-invite',
+  '/api/[storeId]/auth/permissions'  // Allow permissions check endpoint
 ];
 const storefrontPublicRoutes = ['/api/storefront/[storeId]/auth', '/api/storefront/[storeId]/register'];
 
@@ -31,43 +33,50 @@ export async function middleware(request: NextRequest) {
                          hostname === '127.0.0.1:3000' ||
                          hostname === 'admin.lvh.me:3000';
 
-      console.log('[MIDDLEWARE] Processing request:', { 
-        pathname, 
-        hostname, 
-        isAdminDomain,
-        hasToken: !!request.cookies.get('admin_token')?.value,
-        isPublicRoute: publicRoutes.includes(pathname),
-        isApiRoute: pathname.startsWith('/api'),
-        isAcceptInvite: pathname.startsWith('/accept-invite')
-      });
-
     // Log every path exclusion check
     const isNextInternal = pathname.startsWith('/_next');
     const isStatic = pathname.startsWith('/static');
     const isApi = pathname.startsWith('/api');
     const isFavicon = pathname.startsWith('/favicon.ico');
     const isAcceptInvite = pathname.startsWith('/accept-invite');
-    const isApiAuth = apiAuthRoutes.some(route => pathname.startsWith(route));
-
-    console.log('[MIDDLEWARE] Path checks:', {
-      isNextInternal,
-      isStatic,
-      isApi,
-      isFavicon,
-      isAcceptInvite,
-      isApiAuth
+    const isApiAuth = apiAuthRoutes.some(route => {
+      const pattern = route.replace('[storeId]', '[^/]+');
+      return new RegExp(`^${pattern}`).test(pathname);
     });
 
     // Always allow these paths
     if (
       isNextInternal || 
       isStatic || 
-      isApi || 
       isFavicon ||
       isAcceptInvite ||
       isApiAuth
     ) {
-      console.log('[MIDDLEWARE] Allowing through path exclusion');
+      return NextResponse.next();
+    }
+
+    // Handle API routes with permission checks
+    if (isApi) {
+      // Extract storeId from API path
+      const storeIdMatch = pathname.match(/\/api\/([^\/]+)/);
+      if (storeIdMatch) {
+        const storeId = storeIdMatch[1];
+        
+        // Check if route requires permissions
+        const requiredPermission = getRequiredPermissionForRoute(pathname);
+        if (requiredPermission) {
+          const permissionCheck = await withPermissionCheck(
+            request,
+            storeId,
+            requiredPermission
+          );
+          
+          if (permissionCheck) {
+            return permissionCheck; // Return error response if permission check failed
+          }
+        }
+      }
+      
       return NextResponse.next();
     }
 
@@ -98,31 +107,8 @@ export async function middleware(request: NextRequest) {
       const adminToken = await request.cookies.get('admin_token')?.value;
       const isPublic = publicRoutes.includes(pathname);
 
-      console.log('[MIDDLEWARE] Auth check:', {
-        hasAdminToken: !!adminToken,
-        isPublicRoute: isPublic,
-        pathname
-      });
-
       if (!adminToken && !isPublic) {
-        console.log('[MIDDLEWARE] Redirecting to signin - no token and not public route');
         return NextResponse.redirect(new URL('/signin', request.url));
-      }
-
-      // Extract storeId from URL for dashboard routes
-      const storeIdMatch = pathname.match(/\/([^\/]+)\//);
-      if (storeIdMatch && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
-        const storeId = storeIdMatch[1];
-        if (storeId === 'new') {
-          return NextResponse.next();
-        }
-        
-        // For non-API routes requiring auth, just verify the token exists
-        if (!adminToken) {
-          return NextResponse.redirect(new URL('/signin', request.url));
-        }
-        
-        return NextResponse.next();
       }
 
       return NextResponse.next();
@@ -130,7 +116,6 @@ export async function middleware(request: NextRequest) {
 
     // Handle store domain routes
     let storeDomain: string;
-    console.log('[MIDDLEWARE] Original hostname:', hostname);
     
     if (hostname.includes('lvh.me:3000')) {
       // Handle local development domain
@@ -142,7 +127,6 @@ export async function middleware(request: NextRequest) {
     } else if (hostname.includes('vercel.app')) {
       // Handle store subdomains on vercel.app
       const storePart = hostname.split('.')[0];
-      // Remove 'preview-ecoreact' prefix if present
       storeDomain = storePart.replace('preview-ecoreact-', '');
     } else {
       // For any other domains, treat them as potential store domains
@@ -152,8 +136,6 @@ export async function middleware(request: NextRequest) {
       }
       storeDomain = parts[0];
     }
-
-    console.log('[MIDDLEWARE] Extracted storeDomain:', storeDomain);
 
     // Check store authentication if accessing private store routes
     const isStoreAuthRoute = pathname.startsWith('/profile') || 
@@ -180,13 +162,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except for:
-     * 1. /_next (Next.js internals)
-     * 2. /static (static files)
-     * 3. /_vercel (Vercel internals)
-     * 4. /favicon.ico, sitemap.xml (public files)
-     */
     '/((?!_next|static|_vercel|favicon.ico|sitemap.xml).*)',
   ],
 };

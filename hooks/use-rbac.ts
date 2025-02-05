@@ -1,7 +1,19 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { Permission, Role } from '@/types/role';
+import { toast } from "react-hot-toast";
+import { Permissions } from "@/types/permissions";
+
+// Cache permissions in memory
+let permissionsCache: {
+  [storeId: string]: {
+    permissions: string[];
+    timestamp: number;
+  }
+} = {};
+
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
 export interface UserPermissions {
   hasPermission: (permission: string) => boolean;
@@ -14,17 +26,37 @@ export const useRBAC = (storeId: string): UserPermissions => {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  const hasPermission = useCallback((permission: string): boolean => {
+    return permissions.includes(permission);
+  }, [permissions]);
+
   useEffect(() => {
     const fetchPermissions = async () => {
+      // Check cache first
+      const cached = permissionsCache[storeId];
+      if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        setPermissions(cached.permissions);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         const response = await fetch(`/api/${storeId}/auth/permissions`);
         if (!response.ok) {
           throw new Error('Failed to fetch permissions');
         }
         const data = await response.json();
+        
+        // Update cache
+        permissionsCache[storeId] = {
+          permissions: data.permissions,
+          timestamp: Date.now()
+        };
+        
         setPermissions(data.permissions);
       } catch (err) {
         setError(err instanceof Error ? err : new Error('Unknown error'));
+        console.error("Failed to load permissions:", err);
       } finally {
         setIsLoading(false);
       }
@@ -33,96 +65,12 @@ export const useRBAC = (storeId: string): UserPermissions => {
     fetchPermissions();
   }, [storeId]);
 
-  const hasPermission = (permission: string): boolean => {
-    return permissions.includes(permission);
-  };
-
   return {
     hasPermission,
     isLoading,
     error,
   };
 };
-
-// Predefined permission constants
-export const Permissions = {
-  // Catalog Structure permissions
-  VIEW_TAXONOMIES: 'taxonomies:view',
-  MANAGE_TAXONOMIES: 'taxonomies:manage',
-  VIEW_TAXONS: 'taxons:view',
-  MANAGE_TAXONS: 'taxons:manage',
-
-  // Product permissions
-  VIEW_PRODUCTS: 'products:view',
-  CREATE_PRODUCTS: 'products:create',
-  EDIT_PRODUCTS: 'products:edit',
-  DELETE_PRODUCTS: 'products:delete',
-
-  // Variant permissions
-  VIEW_VARIANTS: 'variants:view',
-  CREATE_VARIANTS: 'variants:create',
-  EDIT_VARIANTS: 'variants:edit',
-  DELETE_VARIANTS: 'variants:delete',
-
-  // Order permissions
-  VIEW_ORDERS: 'orders:view',
-  MANAGE_ORDERS: 'orders:manage',
-  
-  // Customer permissions
-  VIEW_CUSTOMERS: 'customers:view',
-  MANAGE_CUSTOMERS: 'customers:manage',
-  
-  // Settings permissions
-  VIEW_SETTINGS: 'settings:view',
-  MANAGE_SETTINGS: 'settings:manage',
-  
-  // Role management permissions
-  VIEW_ROLES: 'roles:view',
-  MANAGE_ROLES: 'roles:manage',
-  
-  // Attribute permissions
-  VIEW_ATTRIBUTES: 'attributes:view',
-  MANAGE_ATTRIBUTES: 'attributes:manage',
-  VIEW_OPTION_TYPES: 'option-types:view',
-  MANAGE_OPTION_TYPES: 'option-types:manage',
-
-  // Supplier permissions
-  VIEW_SUPPLIERS: 'suppliers:view',
-  MANAGE_SUPPLIERS: 'suppliers:manage',
-
-  // Store management permissions
-  VIEW_STORE: 'store:view',
-  MANAGE_STORE: 'store:manage',
-  
-  // Content permissions
-  VIEW_LAYOUTS: 'layouts:view',
-  MANAGE_LAYOUTS: 'layouts:manage',
-  VIEW_BILLBOARDS: 'billboards:view',
-  MANAGE_BILLBOARDS: 'billboards:manage',
-  VIEW_REVIEWS: 'reviews:view',
-  MANAGE_REVIEWS: 'reviews:manage',
-  
-  // Category permissions
-  VIEW_CATEGORIES: 'categories:view',
-  MANAGE_CATEGORIES: 'categories:manage',
-  
-  // Brand permissions
-  VIEW_BRANDS: 'brands:view',
-  MANAGE_BRANDS: 'brands:manage',
-  
-  // Stock permissions
-  VIEW_STOCK: 'stock:view',
-  MANAGE_STOCK: 'stock:manage',
-  VIEW_STOCK_MOVEMENTS: 'stock-movements:view',
-  MANAGE_STOCK_MOVEMENTS: 'stock-movements:manage',
-
-  // Analytics permissions
-  VIEW_ANALYTICS: 'analytics:view',
-  MANAGE_ANALYTICS: 'analytics:manage',
-} as const;
-
-// Helper type for permission values
-export type PermissionValue = typeof Permissions[keyof typeof Permissions];
 
 // Predefined roles with their permissions
 export const DefaultRoles = {

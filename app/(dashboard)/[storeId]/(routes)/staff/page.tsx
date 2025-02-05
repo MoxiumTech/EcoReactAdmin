@@ -6,7 +6,7 @@ import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
 import { columns } from "./components/columns";
 import { getUserPermissions } from "@/lib/rbac-middleware";
-import { Permissions } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 import StaffClient from "./components/client";
 
 export default async function StaffPage({

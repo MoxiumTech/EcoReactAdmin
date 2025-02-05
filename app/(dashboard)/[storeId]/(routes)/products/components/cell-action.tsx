@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { AlertModal } from "@/components/modals/alert-modal";
+import { useRBAC } from "@/hooks/use-rbac";
+import { Permissions } from "@/types/permissions";
 
 import { ProductColumn } from "./columns";
 
@@ -28,6 +30,12 @@ export const CellAction: React.FC<CellActionProps> = ({
   const params = useParams();
   const [loading, setLoading] = useState(false);
   const [open, setOpen] = useState(false);
+  const { hasPermission } = useRBAC(params.storeId as string);
+
+  // Check individual permissions
+  const canEdit = hasPermission(Permissions.EDIT_PRODUCTS);
+  const canArchive = hasPermission(Permissions.EDIT_PRODUCTS);
+  const canDelete = hasPermission(Permissions.DELETE_PRODUCTS);
 
   const onCopy = (id: string) => {
     navigator.clipboard.writeText(id);
@@ -100,31 +108,37 @@ export const CellAction: React.FC<CellActionProps> = ({
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end">
           <DropdownMenuLabel>Actions</DropdownMenuLabel>
-          <DropdownMenuItem onClick={() => router.push(`/${params.storeId}/products/${data.id}`)}>
-            <Edit className="mr-2 h-4 w-4" />
-            Edit
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => onCopy(data.id)}>
             <Copy className="mr-2 h-4 w-4" />
             Copy Id
           </DropdownMenuItem>
-          <DropdownMenuItem onClick={onArchive}>
-            {data.isArchived ? (
-              <>
-                <RefreshCcw className="mr-2 h-4 w-4" />
-                Restore
-              </>
-            ) : (
-              <>
-                <Archive className="mr-2 h-4 w-4" />
-                Archive
-              </>
-            )}
-          </DropdownMenuItem>
-          <DropdownMenuItem onClick={() => setOpen(true)}>
-            <Trash className="mr-2 h-4 w-4" />
-            Delete
-          </DropdownMenuItem>
+          {canEdit && (
+            <DropdownMenuItem onClick={() => router.push(`/${params.storeId}/products/${data.id}`)}>
+              <Edit className="mr-2 h-4 w-4" />
+              Edit
+            </DropdownMenuItem>
+          )}
+          {canArchive && (
+            <DropdownMenuItem onClick={onArchive}>
+              {data.isArchived ? (
+                <>
+                  <RefreshCcw className="mr-2 h-4 w-4" />
+                  Restore
+                </>
+              ) : (
+                <>
+                  <Archive className="mr-2 h-4 w-4" />
+                  Archive
+                </>
+              )}
+            </DropdownMenuItem>
+          )}
+          {canDelete && (
+            <DropdownMenuItem onClick={() => setOpen(true)}>
+              <Trash className="mr-2 h-4 w-4" />
+              Delete
+            </DropdownMenuItem>
+          )}
         </DropdownMenuContent>
       </DropdownMenu>
     </>
