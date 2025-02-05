@@ -14,11 +14,13 @@ import { CreateRoleModal } from "./create-role-modal";
 interface RolesClientProps {
   data: RoleColumn[];
   canManage: boolean;
+  description?: string;
 }
 
 export const RoleClient: React.FC<RolesClientProps> = ({
   data,
-  canManage
+  canManage,
+  description
 }) => {
   const params = useParams();
   const router = useRouter();
@@ -36,7 +38,7 @@ export const RoleClient: React.FC<RolesClientProps> = ({
       <div className="flex items-center justify-between">
         <Heading 
           title={`Roles (${data.length})`} 
-          description="Manage roles and permissions for staff members" 
+          description={description || "Manage roles and permissions for staff members"} 
         />
         {canManage && (
           <Button onClick={() => setOpen(true)}>

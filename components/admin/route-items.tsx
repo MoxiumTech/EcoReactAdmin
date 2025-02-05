@@ -2,6 +2,8 @@
 
 import { usePathname, useParams } from "next/navigation";
 import { LucideIcon } from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRBAC, Permissions } from "@/hooks/use-rbac";
 import {
   LayoutDashboard,
   Package,
@@ -49,36 +51,64 @@ interface UseRouteItemsProps {
   };
 }
 
-// Helper function to check if a user has access to a route
-function hasRouteAccess(route: string, isOwner: boolean, roleName?: string): boolean {
+// Helper function to check if a user has access to a route based on permissions
+function hasRouteAccess(route: string, isOwner: boolean, hasPermission: (permission: string) => boolean): boolean {
   if (isOwner) return true;
 
-  // Staff with Store Manager role has access to most features except staff management
-  if (roleName === 'Store Manager') {
-    const restrictedRoutes = ['/staff', '/roles'];
-    return !restrictedRoutes.some(restricted => route.includes(restricted));
-  }
+  // Map routes to required permissions
+  const routePermissions: Record<string, string> = {
+    // Catalog
+    '/taxonomies': Permissions.VIEW_TAXONOMIES,
+    '/taxons': Permissions.VIEW_TAXONS,
+    '/products': Permissions.VIEW_PRODUCTS,
+    '/variants': Permissions.VIEW_VARIANTS,
+    '/brands': Permissions.VIEW_BRANDS,
+    '/suppliers': Permissions.VIEW_SUPPLIERS,
+    
+    // Attributes & Properties
+    '/attributes': Permissions.VIEW_ATTRIBUTES,
+    '/attribute-values': Permissions.VIEW_ATTRIBUTES,
+    '/option-types': Permissions.VIEW_OPTION_TYPES,
+    
+    // Inventory
+    '/stock-items': Permissions.VIEW_STOCK,
+    '/stock-movements': Permissions.VIEW_STOCK_MOVEMENTS,
+    
+    // Sales
+    '/orders': Permissions.VIEW_ORDERS,
+    '/customers': Permissions.VIEW_CUSTOMERS,
+    
+    // Content
+    '/layouts': Permissions.VIEW_LAYOUTS,
+    '/billboards': Permissions.VIEW_BILLBOARDS,
+    '/reviews': Permissions.VIEW_REVIEWS,
+    
+    // Documentation
+    '/documentation': Permissions.VIEW_STORE,
+    
+    // Settings
+    '/settings': Permissions.VIEW_SETTINGS,
+    '/staff': Permissions.MANAGE_ROLES,
+    '/roles': Permissions.MANAGE_ROLES,
+    
+    // Analytics (for future use)
+    '/analytics': Permissions.VIEW_ANALYTICS
+  };
 
-  // Inventory Manager can only access inventory-related routes
-  if (roleName === 'Inventory Manager') {
-    const allowedRoutes = ['/products', '/stock-items', '/stock-movements', '/suppliers'];
-    return allowedRoutes.some(allowed => route.includes(allowed));
-  }
-
-  // Content Manager can only access content-related routes
-  if (roleName === 'Content Manager') {
-    const allowedRoutes = ['/layouts', '/billboards', '/taxonomies', '/taxons'];
-    return allowedRoutes.some(allowed => route.includes(allowed));
+  // Find matching route permission
+  for (const [routePath, permission] of Object.entries(routePermissions)) {
+    if (route.includes(routePath)) {
+      return hasPermission(permission);
+    }
   }
 
   return false;
 }
 
-export function useRouteItems({ isOwner, role }: UseRouteItemsProps) {
+export function useRouteItems({ isOwner }: UseRouteItemsProps) {
   const pathname = usePathname();
-  const params = useParams();
-
-  const routes: RouteItem[] = [
+  const params = useParams() as { storeId: string };
+  const [routes] = useState<RouteItem[]>(() => [
     {
       label: "Overview",
       icon: LayoutDashboard,
@@ -247,10 +277,13 @@ export function useRouteItems({ isOwner, role }: UseRouteItemsProps) {
         }
       ]
     },
-  ];
+  ]);
 
-  // Filter and transform routes based on user role
-  return routes.reduce<RouteItem[]>((acc, route) => {
+  // Get permission check function from RBAC hook
+  const { hasPermission } = useRBAC(params.storeId);
+
+  // Filter routes based on permissions
+  const filteredRoutes = routes.reduce<RouteItem[]>((acc, route) => {
     // Always allow overview for everyone
     if (route.href?.endsWith(`/${params.storeId}`)) {
       acc.push(route);
@@ -259,7 +292,7 @@ export function useRouteItems({ isOwner, role }: UseRouteItemsProps) {
 
     // If it's a single route
     if (route.href) {
-      if (hasRouteAccess(route.href, isOwner, role?.name)) {
+      if (hasRouteAccess(route.href, isOwner, hasPermission)) {
         acc.push(route);
       }
       return acc;
@@ -268,7 +301,7 @@ export function useRouteItems({ isOwner, role }: UseRouteItemsProps) {
     // If it has subitems, filter those
     if (route.items) {
       const accessibleItems = route.items.filter(item => 
-        hasRouteAccess(item.href, isOwner, role?.name)
+        hasRouteAccess(item.href, isOwner, hasPermission)
       );
       
       // Only include the category if it has accessible items
@@ -282,6 +315,8 @@ export function useRouteItems({ isOwner, role }: UseRouteItemsProps) {
     
     return acc;
   }, []);
+
+  return filteredRoutes;
 }
 
 export type { MenuItem, RouteItem };

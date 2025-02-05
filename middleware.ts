@@ -1,12 +1,16 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import path from 'path';
-import jwt from 'jsonwebtoken';
 
 // List of public routes that don't require authentication
-const publicRoutes = ['/signin', '/signup'];
-const authRoutes = ['/signin', '/signup'];
-const apiAuthRoutes = ['/api/auth/signin', '/api/auth/signup'];
+const publicRoutes = ['/signin', '/signup', '/accept-invite'];
+const authRoutes = ['/signin', '/signup', '/accept-invite'];
+const apiAuthRoutes = [
+  '/api/auth/signin',
+  '/api/auth/signup',
+  '/api/staff/verify-invite',
+  '/api/staff/accept-invite',
+  '/api/staff/debug-invite'
+];
 const storefrontPublicRoutes = ['/api/storefront/[storeId]/auth', '/api/storefront/[storeId]/register'];
 
 // Check if a route is an admin dashboard route
@@ -27,15 +31,43 @@ export async function middleware(request: NextRequest) {
                          hostname === '127.0.0.1:3000' ||
                          hostname === 'admin.lvh.me:3000';
 
-    console.log('[MIDDLEWARE] Processing request:', { pathname, hostname, isAdminDomain });
+      console.log('[MIDDLEWARE] Processing request:', { 
+        pathname, 
+        hostname, 
+        isAdminDomain,
+        hasToken: !!request.cookies.get('admin_token')?.value,
+        isPublicRoute: publicRoutes.includes(pathname),
+        isApiRoute: pathname.startsWith('/api'),
+        isAcceptInvite: pathname.startsWith('/accept-invite')
+      });
 
-    // Exclude static files, API routes, and other non-middleware paths
+    // Log every path exclusion check
+    const isNextInternal = pathname.startsWith('/_next');
+    const isStatic = pathname.startsWith('/static');
+    const isApi = pathname.startsWith('/api');
+    const isFavicon = pathname.startsWith('/favicon.ico');
+    const isAcceptInvite = pathname.startsWith('/accept-invite');
+    const isApiAuth = apiAuthRoutes.some(route => pathname.startsWith(route));
+
+    console.log('[MIDDLEWARE] Path checks:', {
+      isNextInternal,
+      isStatic,
+      isApi,
+      isFavicon,
+      isAcceptInvite,
+      isApiAuth
+    });
+
+    // Always allow these paths
     if (
-      pathname.startsWith('/_next') || 
-      pathname.startsWith('/static') || 
-      pathname.startsWith('/api') || 
-      pathname.startsWith('/favicon.ico')
+      isNextInternal || 
+      isStatic || 
+      isApi || 
+      isFavicon ||
+      isAcceptInvite ||
+      isApiAuth
     ) {
+      console.log('[MIDDLEWARE] Allowing through path exclusion');
       return NextResponse.next();
     }
 
@@ -57,35 +89,42 @@ export async function middleware(request: NextRequest) {
 
     // Handle admin domain requests
     if (isAdminDomain) {
-      // Allow access to auth pages
+      // Allow access to auth pages and accept invite
       if (authRoutes.includes(pathname)) {
         return NextResponse.next();
       }
 
       // Check admin auth for dashboard routes
       const adminToken = await request.cookies.get('admin_token')?.value;
-      if (!adminToken && !publicRoutes.includes(pathname)) {
+      const isPublic = publicRoutes.includes(pathname);
+
+      console.log('[MIDDLEWARE] Auth check:', {
+        hasAdminToken: !!adminToken,
+        isPublicRoute: isPublic,
+        pathname
+      });
+
+      if (!adminToken && !isPublic) {
+        console.log('[MIDDLEWARE] Redirecting to signin - no token and not public route');
         return NextResponse.redirect(new URL('/signin', request.url));
       }
 
-    // Extract storeId from URL for dashboard routes
-    const storeIdMatch = pathname.match(/\/([^\/]+)\//);
-    if (storeIdMatch && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
-      const storeId = storeIdMatch[1];
-      if (storeId === 'new') {
+      // Extract storeId from URL for dashboard routes
+      const storeIdMatch = pathname.match(/\/([^\/]+)\//);
+      if (storeIdMatch && !pathname.startsWith('/_next') && !pathname.startsWith('/api')) {
+        const storeId = storeIdMatch[1];
+        if (storeId === 'new') {
+          return NextResponse.next();
+        }
+        
+        // For non-API routes requiring auth, just verify the token exists
+        if (!adminToken) {
+          return NextResponse.redirect(new URL('/signin', request.url));
+        }
+        
         return NextResponse.next();
       }
-      
-      // For non-API routes requiring auth, just verify the token exists
-      if (!adminToken) {
-        return NextResponse.redirect(new URL('/signin', request.url));
-      }
-      
-      // Let the API routes handle detailed auth checks
-      return NextResponse.next();
-    }
 
-      // Allow access to all admin dashboard paths after verification
       return NextResponse.next();
     }
 
@@ -146,7 +185,7 @@ export const config = {
      * 1. /_next (Next.js internals)
      * 2. /static (static files)
      * 3. /_vercel (Vercel internals)
-     * 4. /favicon.ico, /sitemap.xml (public files)
+     * 4. /favicon.ico, sitemap.xml (public files)
      */
     '/((?!_next|static|_vercel|favicon.ico|sitemap.xml).*)',
   ],

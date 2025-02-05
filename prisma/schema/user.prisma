@@ -59,9 +59,15 @@ model StaffInvitation {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
-  @@unique([email, storeId])
+  // Ensure token is unique and indexed for fast lookups
+  @@index([token])
+  @@index([email])
   @@index([storeId])
   @@index([roleId])
+  @@index([status])
+  
+  // Prevent multiple pending invitations for same email and store
+  @@unique([email, storeId, status])
 }
 
 model Customer {

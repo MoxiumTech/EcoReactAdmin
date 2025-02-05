@@ -1,7 +1,7 @@
 'use client';
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -29,7 +29,16 @@ type SignInFormValues = z.infer<typeof formSchema>;
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
+  
+  useEffect(() => {
+    // Show error message if present in URL
+    const error = searchParams?.get('error');
+    if (error) {
+      toast.error(decodeURIComponent(error));
+    }
+  }, [searchParams]);
 
   const form = useForm<SignInFormValues>({
     resolver: zodResolver(formSchema),
@@ -137,7 +146,7 @@ export default function SignInPage() {
       </Form>
 
       <div className="mt-4 text-center text-sm text-muted-foreground">
-      Don&apos;t have an account?{' '}
+        Don&apos;t have an account?{' '}
         <Link 
           href="/signup"
           className="underline underline-offset-4 hover:text-primary"

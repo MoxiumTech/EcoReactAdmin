@@ -1,13 +1,14 @@
 "use client";
 
 import * as z from "zod";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
 import { useParams } from "next/navigation";
 
 import { Modal } from "@/components/ui/modal";
+import { InviteUrlModal } from "@/components/modals/invite-url-modal";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -45,6 +46,11 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   const params = useParams();
   const [loading, setLoading] = useState(false);
   const [roles, setRoles] = useState<{ id: string; name: string }[]>([]);
+  const [showInviteUrl, setShowInviteUrl] = useState(false);
+  const [inviteDetails, setInviteDetails] = useState<{
+    url: string;
+    email: string;
+  } | null>(null);
 
   const form = useForm<InviteFormValues>({
     resolver: zodResolver(formSchema),
@@ -90,9 +96,21 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         throw new Error();
       }
 
-      toast.success("Staff invitation sent successfully");
-      form.reset();
-      onClose();
+      const responseData = await response.json();
+      
+      if (!responseData.emailSent) {
+        const inviteUrl = responseData.acceptUrl;
+        const email = form.getValues("email");
+        setInviteDetails({
+          url: inviteUrl,
+          email: email
+        });
+        setShowInviteUrl(true);
+      } else {
+        toast.success("Staff invitation sent successfully");
+        form.reset();
+        onClose();
+      }
     } catch (error: any) {
       if (error?.response?.status === 500) {
         const errorText = await error.response.text();
@@ -115,7 +133,8 @@ export const InviteModal: React.FC<InviteModalProps> = ({
   };
 
   return (
-    <Modal
+    <>
+      <Modal
       title="Invite Staff Member"
       description="Send an invitation to join your store staff"
       isOpen={isOpen}
@@ -190,5 +209,17 @@ export const InviteModal: React.FC<InviteModalProps> = ({
         </Form>
       </div>
     </Modal>
+      <InviteUrlModal
+        isOpen={showInviteUrl}
+        onClose={() => {
+          setShowInviteUrl(false);
+          setInviteDetails(null);
+          form.reset();
+          onClose();
+        }}
+        inviteUrl={inviteDetails?.url || ''}
+        email={inviteDetails?.email || ''}
+      />
+    </>
   );
 };
