@@ -13,10 +13,12 @@ import { AttributeColumn, columns } from "./columns";
 
 interface AttributesClientProps {
   data: AttributeColumn[];
+  canManage: boolean;
 }
 
 export const AttributesClient: React.FC<AttributesClientProps> = ({
-  data
+  data,
+  canManage
 }) => {
   const router = useRouter();
   const params = useParams();
@@ -28,16 +30,22 @@ export const AttributesClient: React.FC<AttributesClientProps> = ({
           title={`Attributes (${data.length})`}
           description="Manage product attributes for your store"
         />
-        <Button onClick={() => router.push(`/${params.storeId}/attributes/new`)}>
-          <Plus className="mr-2 h-4 w-4" />
-          Add New
-        </Button>
+        {canManage && (
+          <Button onClick={() => router.push(`/${params.storeId}/attributes/new`)}>
+            <Plus className="mr-2 h-4 w-4" />
+            Add New
+          </Button>
+        )}
       </div>
       <Separator />
       <DataTable searchKey="name" columns={columns} data={data} />
-      <Heading title="API" description="API calls for Attributes" />
-      <Separator />
-      <ApiList entityName="attributes" entityIdName="attributeId" />
+      {canManage && (
+        <>
+          <Heading title="API" description="API calls for Attributes" />
+          <Separator />
+          <ApiList entityName="attributes" entityIdName="attributeId" />
+        </>
+      )}
     </>
   );
-}; 
+};

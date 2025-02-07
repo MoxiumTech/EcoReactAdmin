@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, usePathname, useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Store } from "@prisma/client";
+import { Role, Store } from "@prisma/client";
 import { Menu, ChevronRight, LogOut } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import StoreSwitcher from "@/components/store-switcher";
@@ -16,15 +16,25 @@ import { Separator } from "@/components/ui/separator";
 import { useSidebarState } from "@/hooks/use-sidebar-state";
 
 interface SidebarProps {
-  store: Store | null;
-  stores: any[];
+  store: Store & {
+    roleAssignments: Array<{
+      role: Role;
+    }>;
+  };
+  stores: Array<Store & {
+    roleAssignments: Array<{
+      role: Role;
+    }>;
+  }>;
+  isOwner: boolean;
+  role?: Role;
 }
 
-export function Sidebar({ store, stores }: SidebarProps) {
+export function Sidebar({ store, stores, isOwner, role }: SidebarProps) {
   const router = useRouter();
   const [openCategories, setOpenCategories] = useState<string[]>([]);
   const [isMobile, setIsMobile] = useState(false);
-  const routes = useRouteItems();
+  const routes = useRouteItems({ isOwner, role });
   const { isCollapsed, setIsCollapsed } = useSidebarState();
 
   useEffect(() => {
@@ -77,7 +87,11 @@ export function Sidebar({ store, stores }: SidebarProps) {
             "bg-gradient-to-r from-primary/5 to-background",
             "border-b border-border/40"
           )}>
-            {!isCollapsed && <StoreSwitcher items={stores} />}
+            {!isCollapsed && (
+              <div className="flex items-center justify-between w-full">
+                <StoreSwitcher items={stores} disabled={!isOwner} />
+              </div>
+            )}
             {isCollapsed && store && (
               <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
                 <span className="text-lg font-semibold text-primary">
@@ -261,6 +275,22 @@ export function Sidebar({ store, stores }: SidebarProps) {
               </nav>
             </div>
             
+            {/* User Role Information */}
+            {!isCollapsed && (
+              <div className="px-3 py-2">
+                <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-muted/50">
+                  <span className="text-xs text-muted-foreground">
+                    {isOwner ? 'Owner' : role?.name || 'Staff'}
+                  </span>
+                  {!isOwner && (
+                    <span className="text-xs text-muted-foreground">
+                      • {store.name}
+                    </span>
+                  )}
+                </div>
+              </div>
+            )}
+
             {/* Bottom controls */}
             <div className="border-t border-border/40 bg-muted/5">
               <div className={cn(

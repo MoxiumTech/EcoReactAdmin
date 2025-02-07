@@ -31,11 +31,13 @@ type PopoverTriggerProps = React.ComponentPropsWithoutRef<typeof PopoverTrigger>
 
 interface StoreSwitcherProps extends PopoverTriggerProps {
   items: any[];
+  disabled?: boolean;
 }
 
 export default function StoreSwitcher({
   className,
-  items = []
+  items = [],
+  disabled
 }: StoreSwitcherProps) {
   const storeModal = useStoreModal();
   const params = useParams();
@@ -64,11 +66,17 @@ export default function StoreSwitcher({
           aria-expanded={open}
           aria-label="Select a store"
           className={cn(
-            "w-full justify-between hover:bg-primary/5",
+            "w-full justify-between",
+            disabled ? "cursor-default opacity-70" : "hover:bg-primary/5 hover:ring-2 hover:ring-primary/10",
             "ring-offset-background",
-            "hover:ring-2 hover:ring-primary/10",
             className
           )}
+          onClick={(e) => {
+            if (disabled) {
+              e.preventDefault();
+              return;
+            }
+          }}
         >
           <div className="flex items-center gap-2 truncate">
             <div className="rounded-md bg-primary/10 p-1">
@@ -124,22 +132,24 @@ export default function StoreSwitcher({
               ))}
             </CommandGroup>
             <CommandSeparator />
-            <CommandGroup>
-              <CommandItem
-                onSelect={() => {
-                  setOpen(false);
-                  storeModal.onOpen();
-                }}
-                className="text-sm"
-              >
-                <div className="flex items-center gap-2">
-                  <div className="rounded-md bg-muted p-1">
-                    <PlusCircle className="h-4 w-4" />
+            {!disabled && (
+              <CommandGroup>
+                <CommandItem
+                  onSelect={() => {
+                    setOpen(false);
+                    storeModal.onOpen();
+                  }}
+                  className="text-sm"
+                >
+                  <div className="flex items-center gap-2">
+                    <div className="rounded-md bg-muted p-1">
+                      <PlusCircle className="h-4 w-4" />
+                    </div>
+                    <span>Create Store</span>
                   </div>
-                  <span>Create Store</span>
-                </div>
-              </CommandItem>
-            </CommandGroup>
+                </CommandItem>
+              </CommandGroup>
+            )}
           </CommandList>
         </Command>
       </PopoverContent>

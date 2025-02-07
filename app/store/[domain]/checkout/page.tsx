@@ -121,7 +121,7 @@ export default function CheckoutPage() {
     };
 
     loadData();
-  }, [domain, form, cart.customerId, cart.items.length, cart.fetchCart]);
+  }, [domain, form, cart]);
 
   const onSubmit = async (data: CheckoutFormValues) => {
     try {

@@ -132,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     if (isAuthenticated && !cart.items.length) {
       cart.fetchCart();
     }
-  }, [isAuthenticated, cart.items.length, cart.fetchCart]);
+  }, [isAuthenticated, cart]);
 
   useEffect(() => {
     const handleScroll = () => {

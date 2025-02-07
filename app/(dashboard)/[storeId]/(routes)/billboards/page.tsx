@@ -1,19 +1,41 @@
 import { format } from "date-fns";
-
 import prismadb from "@/lib/prismadb";
-
-import { BillboardColumn } from "./components/columns"
 import { BillboardClient } from "./components/client";
+import { BillboardColumn } from "./components/columns";
+import { PermissionGate } from "@/components/auth/permission-gate";
+import { Permissions } from "@/types/permissions";
+import { getAdminSession } from "@/lib/auth";
+import { redirect } from "next/navigation";
+import { getUserPermissions } from "@/lib/rbac-middleware";
 
 const BillboardsPage = async ({
   params
 }: {
   params: { storeId: string }
 }) => {
-  const { storeId } = await params;
+  const session = await getAdminSession();
+
+  if (!session) {
+    redirect('/signin');
+  }
+
+  // Check if user is store owner and get their permissions
+  const [store, userPermissions] = await Promise.all([
+    prismadb.store.findFirst({
+      where: {
+        id: params.storeId,
+        userId: session.userId,
+      }
+    }),
+    getUserPermissions(session.userId, params.storeId)
+  ]);
+
+  const isOwner = !!store;
+  const canManageBillboards = isOwner || userPermissions.includes(Permissions.MANAGE_BILLBOARDS);
+
   const billboards = await prismadb.billboard.findMany({
     where: {
-      storeId
+      storeId: params.storeId
     },
     orderBy: {
       createdAt: 'desc'
@@ -27,11 +49,16 @@ const BillboardsPage = async ({
   }));
 
   return (
-    <div className="flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
-        <BillboardClient data={formattedBillboards} />
+    <PermissionGate permission={Permissions.VIEW_BILLBOARDS}>
+      <div className="flex-col">
+        <div className="flex-1 space-y-4 p-8 pt-6">
+          <BillboardClient
+            data={formattedBillboards}
+            canManage={canManageBillboards}
+          />
+        </div>
       </div>
-    </div>
+    </PermissionGate>
   );
 };
 

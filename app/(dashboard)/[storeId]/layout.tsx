@@ -16,25 +16,90 @@ export default async function DashboardLayout({
     redirect('/signin');
   }
 
+  // Find store with role assignments
   const store = await prismadb.store.findFirst({
     where: {
       id: params.storeId,
-      userId: session.userId,
+      OR: [
+        { userId: session.userId },
+        {
+          roleAssignments: {
+            some: {
+              userId: session.userId
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      roleAssignments: {
+        where: {
+          userId: session.userId
+        },
+        include: {
+          role: true
+        }
+      }
     }
   });
 
   if (!store) {
+    console.log('[LAYOUT] Store not found, checking for any accessible stores...');
+    
+    // Find any accessible store
+    const accessibleStore = await prismadb.store.findFirst({
+      where: {
+        roleAssignments: {
+          some: {
+            userId: session.userId
+          }
+        }
+      }
+    });
+
+    if (accessibleStore) {
+      console.log('[LAYOUT] Redirecting to accessible store:', accessibleStore.id);
+      redirect(`/${accessibleStore.id}/overview`);
+    }
+
+    console.log('[LAYOUT] No accessible stores found');
     redirect('/');
   }
 
+  // Get all accessible stores (owned and assigned)
   const stores = await prismadb.store.findMany({
     where: {
-      userId: session.userId,
+      OR: [
+        { userId: session.userId },
+        {
+          roleAssignments: {
+            some: {
+              userId: session.userId
+            }
+          }
+        }
+      ]
+    },
+    include: {
+      roleAssignments: {
+        where: {
+          userId: session.userId
+        },
+        include: {
+          role: true
+        }
+      }
     }
   });
 
   return (
-    <ClientLayout params={params} store={store} stores={stores}>
+    <ClientLayout 
+      params={params} 
+      store={store} 
+      stores={stores}
+      isOwner={store.userId === session.userId}
+      role={store.roleAssignments?.[0]?.role}
+    >
       {children}
     </ClientLayout>
   );

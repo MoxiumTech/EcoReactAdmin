@@ -2,6 +2,7 @@ model Store {
   id              String           @id @default(uuid())
   name            String
   userId          String
+  user            User             @relation("UserToStore", fields: [userId], references: [id])
   currency        String?          @default("USD")
   locale          String?          @default("en-US")
   domain          String?          @unique @db.Text
@@ -25,6 +26,9 @@ model Store {
   attributeValues AttributeValue[] @relation("StoreToAttributeValue")
   optionTypes     OptionType[]     @relation("StoreToOptionType")
   homeLayouts     HomeLayout[]     @relation("StoreToHomeLayout")
+  roleAssignments RoleAssignment[] @relation("StoreToRoleAssignment")
+  staffInvitations StaffInvitation[] @relation("StoreToStaffInvitation")
+  roles           Role[]           @relation("StoreToRole")
 
   @@index([userId])
 }

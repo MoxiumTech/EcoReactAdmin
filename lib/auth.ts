@@ -18,7 +18,6 @@ export interface CustomerSession {
 
 type Session = AdminSession | CustomerSession;
 
-// Main session getters
 export async function getAdminSession(): Promise<AdminSession | null> {
   try {
     const cookieStore = await cookies();
@@ -53,38 +52,34 @@ export async function getCustomerSession(): Promise<CustomerSession | null> {
   }
 }
 
-// Auth verification
 export async function verifyAuth(): Promise<Session | null> {
-  // Try to get admin session first
   const adminSession = await getAdminSession();
   if (adminSession) {
     return adminSession;
   }
 
-  // If no admin session, try customer session
   const customerSession = await getCustomerSession();
   return customerSession;
 }
 
-// User management
 export async function getUserByEmail(email: string) {
   return prismadb.user.findUnique({
     where: { email }
   });
 }
 
-export async function createUser(email: string, password: string) {
+export async function createUser(email: string, password: string, name?: string) {
   const hashedPassword = await bcrypt.hash(password, 10);
   
   return prismadb.user.create({
     data: {
       email,
-      password: hashedPassword
+      password: hashedPassword,
+      name
     }
   });
 }
 
-// Customer management
 export async function getCustomerByEmail(email: string, storeId: string) {
   return prismadb.customer.findFirst({
     where: {
@@ -112,7 +107,6 @@ export async function createCustomer(
   });
 }
 
-// Password utilities
 export async function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, 10);
 }
@@ -121,7 +115,6 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
-// Token generation
 export function generateAdminToken(user: { id: string; email: string }) {
   return jwt.sign(
     { userId: user.id, email: user.email, role: 'admin' },
@@ -143,7 +136,6 @@ export function generateCustomerToken(customer: { id: string; email: string; sto
   );
 }
 
-// Type guards
 export function isAdmin(session: Session | null): session is AdminSession {
   return session?.role === 'admin';
 }
@@ -152,7 +144,6 @@ export function isCustomer(session: Session | null): session is CustomerSession 
   return session?.role === 'customer';
 }
 
-// Cookie management
 export function getAuthCookie(token: string, role: 'admin' | 'customer') {
   return {
     name: role === 'admin' ? 'admin_token' : 'customer_token',

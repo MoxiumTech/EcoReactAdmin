@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { getAdminSession } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
+import { initializeStoreRoles } from "@/lib/init-store-roles";
 
 export async function POST(
   req: Request,
@@ -28,19 +29,27 @@ export async function POST(
     // Generate a default domain based on store name
     const defaultDomain = name.toLowerCase().replace(/[^a-z0-9]/g, '-');
 
-    const store = await prismadb.store.create({
-      data: {
-        name,
-        userId: session.userId,
-        domain: `${defaultDomain}-${Date.now()}`,  // Ensure uniqueness
-        themeSettings: {
-          primaryColor: '#000000',
-          secondaryColor: '#ffffff',
-          fontFamily: 'Inter'
+    // Create store and initialize roles in a transaction
+    const store = await prismadb.$transaction(async (tx) => {
+      const newStore = await tx.store.create({
+        data: {
+          name,
+          userId: session.userId,
+          domain: `${defaultDomain}-${Date.now()}`,  // Ensure uniqueness
+          themeSettings: {
+            primaryColor: '#000000',
+            secondaryColor: '#ffffff',
+            fontFamily: 'Inter'
+          }
         }
-      }
+      });
+
+      // Initialize roles for the new store
+      await initializeStoreRoles(tx, newStore.id);
+
+      return newStore;
     });
-  
+
     return NextResponse.json({
       success: true,
       data: store
