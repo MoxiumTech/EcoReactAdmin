@@ -33,7 +33,6 @@ export default function SignInPage() {
   const [loading, setLoading] = useState(false);
   
   useEffect(() => {
-    // Show error message if present in URL
     const error = searchParams?.get('error');
     if (error) {
       toast.error(decodeURIComponent(error));
@@ -51,26 +50,16 @@ export default function SignInPage() {
   const onSubmit = async (data: SignInFormValues) => {
     try {
       setLoading(true);
-      console.log('[SIGNIN_PAGE] Attempting signin...');
       const response = await axios.post('/api/auth/signin', data);
       
       const { stores } = response.data;
-      console.log('[SIGNIN_PAGE] Signin successful:', { stores });
 
       if (stores && stores.length > 0) {
         const firstStore = stores[0];
-        console.log('[SIGNIN_PAGE] Found accessible store:', firstStore);
-        
-        // Construct the redirect URL with overview
         const redirectTo = `/${firstStore.id}/overview`;
-        console.log('[SIGNIN_PAGE] Redirecting to:', redirectTo);
-
-        // First show the success message
         toast.success(`Logged in as ${firstStore.roles[0]}`);
 
-        // Wait a bit for the toast to show before redirecting
         setTimeout(() => {
-          // Use window.location for hard redirect
           window.location.href = redirectTo;
         }, 500);
       } else {
@@ -88,32 +77,33 @@ export default function SignInPage() {
 
   return (
     <div className="mx-auto w-full">
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+      <div className="flex flex-col space-y-2 text-center mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
           Welcome back
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Enter your credentials to access your account
         </p>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="auth-label">Email</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="admin@example.com"
                     type="email"
+                    className="auth-input"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
@@ -122,22 +112,23 @@ export default function SignInPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="auth-label">Password</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="Enter your password"
                     type="password"
+                    className="auth-input"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
           <Button
             type="submit"
-            className="w-full"
+            className="auth-button w-full mt-6"
             disabled={loading}
           >
             Sign In
@@ -145,11 +136,11 @@ export default function SignInPage() {
         </form>
       </Form>
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
+      <div className="mt-6 text-center text-sm">
         Don&apos;t have an account?{' '}
         <Link 
           href="/signup"
-          className="underline underline-offset-4 hover:text-primary"
+          className="auth-link font-medium"
         >
           Sign up
         </Link>

@@ -40,6 +40,10 @@ body,
     --ring: 215 20.2% 65.1%;
  
     --radius: 0.5rem;
+
+    /* Glass effect variables */
+    --mouse-x: 0px;
+    --mouse-y: 0px;
   }
  
   .dark {
@@ -81,4 +85,45 @@ body,
   body {
     @apply bg-background text-foreground;
   }
+}
+
+/* Glass effect styles */
+.glass-auth-container {
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.glass-auth-container:hover .glass-gradient {
+  opacity: 1;
+}
+
+.glass-gradient {
+  --mouse-x: 50%;
+  --mouse-y: 50%;
+  transition: opacity 0.3s ease;
+}
+
+/* Auth form styles */
+.auth-input {
+  @apply bg-white/5 backdrop-blur-sm border-white/10 focus:border-white/20 transition-all duration-200 !important;
+}
+
+.dark .auth-input {
+  @apply bg-black/5 border-gray-800/30 focus:border-gray-700/50 !important;
+}
+
+.auth-label {
+  @apply text-sm font-medium text-gray-600 dark:text-gray-300;
+}
+
+.auth-button {
+  @apply bg-black/80 hover:bg-black/90 text-white dark:bg-white/90 dark:hover:bg-white/100 dark:text-black transition-all duration-200 !important;
+}
+
+.auth-form {
+  @apply space-y-4 backdrop-blur-sm;
+}
+
+.auth-link {
+  @apply text-black/60 hover:text-black/80 dark:text-white/60 dark:hover:text-white/80 transition-colors !important;
 }

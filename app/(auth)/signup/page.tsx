@@ -70,31 +70,32 @@ export default function SignUpPage() {
 
   return (
     <div className="mx-auto w-full">
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+      <div className="flex flex-col space-y-2 text-center mb-8">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-gray-100">
           Create an account
         </h1>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
           Enter your details to create your admin account
         </p>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="auth-form">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel className="auth-label">Name</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="Your name"
+                    className="auth-input"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
@@ -103,16 +104,17 @@ export default function SignUpPage() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="auth-label">Email</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="admin@example.com"
                     type="email"
+                    className="auth-input"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
@@ -121,16 +123,17 @@ export default function SignUpPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="auth-label">Password</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="Create a password"
                     type="password"
+                    className="auth-input"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
@@ -139,22 +142,23 @@ export default function SignUpPage() {
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+                <FormLabel className="auth-label">Confirm Password</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="Confirm your password"
                     type="password"
+                    className="auth-input"
                   />
                 </FormControl>
-                <FormMessage />
+                <FormMessage className="text-red-500" />
               </FormItem>
             )}
           />
           <Button
             type="submit"
-            className="w-full"
+            className="auth-button w-full mt-6"
             disabled={loading}
           >
             Create Account
@@ -162,11 +166,11 @@ export default function SignUpPage() {
         </form>
       </Form>
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
+      <div className="mt-6 text-center text-sm">
         Already have an account?{' '}
         <Link 
           href="/signin"
-          className="underline underline-offset-4 hover:text-primary"
+          className="auth-link font-medium"
         >
           Sign in
         </Link>
