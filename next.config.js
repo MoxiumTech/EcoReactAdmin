@@ -12,6 +12,19 @@ const nextConfig = {
       process.env.NEXT_PUBLIC_APPWRITE_ENDPOINT?.replace(/^https?:\/\//, '') || '',
     ]
   },
+  // Enable domain handling
+  domains: [
+    {
+      // Main domain configuration
+      domain: process.env.MAIN_DOMAIN || 'lvh.me:3000',
+      defaultLocale: 'en',
+    },
+    {
+      // Admin subdomain configuration
+      domain: process.env.ADMIN_DOMAIN || 'admin.lvh.me:3000',
+      defaultLocale: 'en',
+    }
+  ],
   experimental: {
     serverActions: {
       bodySizeLimit: '2mb'

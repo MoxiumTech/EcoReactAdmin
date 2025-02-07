@@ -145,6 +145,11 @@ export function isCustomer(session: Session | null): session is CustomerSession 
 }
 
 export function getAuthCookie(token: string, role: 'admin' | 'customer') {
+  // Get domain from environment or use default
+  const rootDomain = process.env.NEXT_PUBLIC_MAIN_DOMAIN || 'lvh.me';
+  // Remove port if present
+  const domain = rootDomain.split(':')[0];
+  
   return {
     name: role === 'admin' ? 'admin_token' : 'customer_token',
     value: token,
@@ -152,6 +157,7 @@ export function getAuthCookie(token: string, role: 'admin' | 'customer') {
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/',
+    domain: domain, // This allows the cookie to work across subdomains
     expires: new Date(Date.now() + (role === 'admin' ? 7 : 30) * 24 * 60 * 60 * 1000)
   };
 }

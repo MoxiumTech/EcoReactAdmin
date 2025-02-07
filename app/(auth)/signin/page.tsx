@@ -54,29 +54,28 @@ export default function SignInPage() {
       console.log('[SIGNIN_PAGE] Attempting signin...');
       const response = await axios.post('/api/auth/signin', data);
       
-      const { stores } = response.data;
-      console.log('[SIGNIN_PAGE] Signin successful:', { stores });
+      const { user, defaultStoreId } = response.data;
+      console.log('[SIGNIN_PAGE] Signin successful:', { user, defaultStoreId });
 
-      if (stores && stores.length > 0) {
-        const firstStore = stores[0];
-        console.log('[SIGNIN_PAGE] Found accessible store:', firstStore);
+      if (defaultStoreId) {
+        // Get admin domain from env or default
+        const adminDomain = process.env.NEXT_PUBLIC_ADMIN_DOMAIN || 'admin.lvh.me:3000';
         
-        // Construct the redirect URL with overview
-        const redirectTo = `/${firstStore.id}/overview`;
+        // Construct the redirect URL to admin domain with overview
+        const redirectTo = `http://${adminDomain}/${defaultStoreId}/overview`;
         console.log('[SIGNIN_PAGE] Redirecting to:', redirectTo);
 
         // First show the success message
-        toast.success(`Logged in as ${firstStore.roles[0]}`);
+        toast.success('Successfully signed in');
 
         // Wait a bit for the toast to show before redirecting
         setTimeout(() => {
-          // Use window.location for hard redirect
           window.location.href = redirectTo;
         }, 500);
       } else {
         toast.error('No accessible stores found.');
         setTimeout(() => {
-          window.location.href = '/';
+          window.location.href = '/signin';
         }, 500);
       }
     } catch (error) {
@@ -87,30 +86,31 @@ export default function SignInPage() {
   };
 
   return (
-    <div className="mx-auto w-full">
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+    <>
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
           Welcome back
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your credentials to access your account
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Sign in to your admin dashboard
         </p>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Email</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="admin@example.com"
                     type="email"
+                    className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-0 ring-1 ring-black/5 dark:ring-white/5"
                   />
                 </FormControl>
                 <FormMessage />
@@ -122,13 +122,14 @@ export default function SignInPage() {
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Password</FormLabel>
                 <FormControl>
                   <Input 
                     {...field}
                     disabled={loading}
                     placeholder="Enter your password"
                     type="password"
+                    className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-0 ring-1 ring-black/5 dark:ring-white/5"
                   />
                 </FormControl>
                 <FormMessage />
@@ -137,23 +138,36 @@ export default function SignInPage() {
           />
           <Button
             type="submit"
-            className="w-full"
             disabled={loading}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 transition-colors"
           >
-            Sign In
+            {loading ? "Signing in..." : "Sign in"}
           </Button>
         </form>
       </Form>
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        Don&apos;t have an account?{' '}
-        <Link 
-          href="/signup"
-          className="underline underline-offset-4 hover:text-primary"
-        >
-          Sign up
-        </Link>
+      <div className="mt-6 space-y-4 text-center">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Don&apos;t have an account?{' '}
+          <Link
+            href="/signup"
+            className="font-medium text-gray-900 hover:text-gray-700 dark:text-white dark:hover:text-gray-300"
+          >
+            Sign up instead
+          </Link>
+        </p>
+
+        <p className="text-xs text-gray-500 dark:text-gray-500">
+          By signing in, you agree to our{' '}
+          <Link href="#" className="text-gray-900 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white">
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link href="#" className="text-gray-900 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
-    </div>
+    </>
   );
 }

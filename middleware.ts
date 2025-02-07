@@ -27,17 +27,38 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const hostname = request.headers.get('host')!;
 
-    // Check if it's the default admin domain
-    const isAdminDomain = hostname === process.env.ADMIN_DOMAIN ||
-                         hostname === 'localhost:3000' ||
-                         hostname === '127.0.0.1:3000' ||
-                         hostname === 'admin.lvh.me:3000';
+    // Get configured domains from environment or defaults (matching next.config.js)
+    const configuredMainDomain = process.env.MAIN_DOMAIN || 'lvh.me:3000';
+    const configuredAdminDomain = process.env.ADMIN_DOMAIN || 'admin.lvh.me:3000';
+
+    // Normalize hostname and configured domains for comparison
+    const cleanHostname = hostname.split(':')[0]; // Remove port if present
+    const mainDomainBase = configuredMainDomain.split(':')[0];
+    const adminDomainBase = configuredAdminDomain.split(':')[0];
+
+    // Check if it's an admin domain - allow both admin.domain and direct admin domain
+    const isAdminDomain = 
+      // Development patterns
+      hostname === 'localhost:3000' ||
+      hostname === '127.0.0.1:3000' ||
+      hostname === 'admin.lvh.me:3000' ||
+      // Production patterns - match both configured admin domain and admin subdomain pattern
+      cleanHostname === adminDomainBase ||
+      cleanHostname === `admin.${mainDomainBase}`;
+
+    // Handle main domain (non-admin, non-store subdomain)
+    const isMainDomain = 
+      hostname === configuredMainDomain ||
+      hostname === 'lvh.me:3000' ||
+      hostname === 'localhost:3000' ||
+      hostname === '127.0.0.1:3000';
 
     // Log every path exclusion check
     const isNextInternal = pathname.startsWith('/_next');
     const isStatic = pathname.startsWith('/static');
     const isApi = pathname.startsWith('/api');
     const isFavicon = pathname.startsWith('/favicon.ico');
+    const isFont = pathname.endsWith('.ttf');
     const isAcceptInvite = pathname.startsWith('/accept-invite');
     const isApiAuth = apiAuthRoutes.some(route => {
       const pattern = route.replace('[storeId]', '[^/]+');
@@ -50,7 +71,8 @@ export async function middleware(request: NextRequest) {
       isStatic || 
       isFavicon ||
       isAcceptInvite ||
-      isApiAuth
+      isApiAuth ||
+      isFont
     ) {
       return NextResponse.next();
     }
@@ -96,17 +118,44 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
-    // Handle admin domain requests
+    // Handle main domain requests (lvh.me)
+    if (isMainDomain) {
+      const adminToken = await request.cookies.get('admin_token')?.value;
+
+      // If user is logged in and tries to access any path on main domain
+      if (adminToken) {
+        // Redirect to admin domain dashboard
+        return NextResponse.redirect(new URL(`http://${configuredAdminDomain}${pathname}`, request.url));
+      }
+
+      // Allow access to public routes and landing page for non-logged in users
+      if (pathname === '/' || pathname.startsWith('/_next') || pathname.startsWith('/static')) {
+        return NextResponse.next();
+      }
+
+      // Redirect auth routes to admin domain
+      if (authRoutes.includes(pathname)) {
+        return NextResponse.redirect(new URL(`http://${configuredAdminDomain}${pathname}`, request.url));
+      }
+    }
+
+    // Handle admin domain requests (admin.lvh.me)
     if (isAdminDomain) {
-      // Allow access to auth pages and accept invite
+      const adminToken = await request.cookies.get('admin_token')?.value;
+      const isPublic = publicRoutes.includes(pathname);
+
+      // If accessing auth routes while logged in, redirect to dashboard
+      if (authRoutes.includes(pathname) && adminToken) {
+        // Will be handled by the page to redirect to correct store
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+
+      // Allow access to auth pages if not logged in
       if (authRoutes.includes(pathname)) {
         return NextResponse.next();
       }
 
       // Check admin auth for dashboard routes
-      const adminToken = await request.cookies.get('admin_token')?.value;
-      const isPublic = publicRoutes.includes(pathname);
-
       if (!adminToken && !isPublic) {
         return NextResponse.redirect(new URL('/signin', request.url));
       }
@@ -121,18 +170,15 @@ export async function middleware(request: NextRequest) {
       // Handle local development domain
       const subdomain = hostname.split('.lvh.me:3000')[0];
       if (!subdomain || subdomain === 'admin') {
-        return NextResponse.redirect(new URL('http://admin.lvh.me:3000', request.url));
+        return NextResponse.redirect(new URL(`http://${configuredAdminDomain}`, request.url));
       }
       storeDomain = subdomain;
-    } else if (hostname.includes('vercel.app')) {
-      // Handle store subdomains on vercel.app
-      const storePart = hostname.split('.')[0];
-      storeDomain = storePart.replace('preview-ecoreact-', '');
     } else {
-      // For any other domains, treat them as potential store domains
+      // For production, extract subdomain from hostname
       const parts = hostname.split('.');
-      if (parts.length < 2) {
-        return NextResponse.redirect(new URL('https://preview-ecoreact.vercel.app', request.url));
+      // If hostname does not have enough parts or is admin domain, redirect to admin
+      if (parts.length < 2 || hostname === configuredAdminDomain) {
+        return NextResponse.redirect(new URL(`https://${configuredAdminDomain}`, request.url));
       }
       storeDomain = parts[0];
     }
@@ -162,6 +208,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next|static|_vercel|favicon.ico|sitemap.xml).*)',
+    '/((?!_next|static|_vercel|favicon.ico|sitemap.xml|Beatrice-Regular.ttf|Beatrice-Medium.ttf).*)',
   ],
 };

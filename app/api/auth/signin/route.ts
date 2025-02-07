@@ -77,9 +77,16 @@ export async function POST(
       return new NextResponse("No accessible stores found", { status: 403 });
     }
 
-    // Generate token
+    const defaultStoreId = stores[0].id;
+
+    // Generate token with default storeId
     const token = jwt.sign(
-      { userId: user.id, email: user.email, role: 'admin' },
+      { 
+        userId: user.id, 
+        email: user.email, 
+        role: 'admin',
+        storeId: defaultStoreId  // Include default store ID in token
+      },
       process.env.JWT_SECRET!,
       { expiresIn: '7d' }
     );
@@ -92,6 +99,7 @@ export async function POST(
       secure: cookieConfig.secure,
       sameSite: cookieConfig.sameSite as 'lax',
       path: cookieConfig.path,
+      domain: cookieConfig.domain,
       expires: cookieConfig.expires
     });
 

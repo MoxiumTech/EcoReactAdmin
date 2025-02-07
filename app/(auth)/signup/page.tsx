@@ -69,108 +69,129 @@ export default function SignUpPage() {
   };
 
   return (
-    <div className="mx-auto w-full">
-      <div className="flex flex-col space-y-2 text-center">
-        <h1 className="text-2xl font-semibold tracking-tight">
+    <>
+      <div className="text-center mb-6">
+        <h1 className="text-2xl font-semibold tracking-tight text-gray-900 dark:text-white">
           Create an account
         </h1>
-        <p className="text-sm text-muted-foreground">
-          Enter your details to create your admin account
+        <p className="mt-2 text-sm text-gray-600 dark:text-gray-400">
+          Get started with your admin dashboard
         </p>
       </div>
 
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
           <FormField
             control={form.control}
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Name</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Full Name</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     {...field}
                     disabled={loading}
-                    placeholder="Your name"
+                    placeholder="John Doe"
+                    className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-0 ring-1 ring-black/5 dark:ring-white/5"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Email</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     {...field}
                     disabled={loading}
-                    placeholder="admin@example.com"
+                    placeholder="you@example.com"
                     type="email"
+                    className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-0 ring-1 ring-black/5 dark:ring-white/5"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="password"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Password</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Password</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     {...field}
                     disabled={loading}
                     placeholder="Create a password"
                     type="password"
+                    className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-0 ring-1 ring-black/5 dark:ring-white/5"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <FormField
             control={form.control}
             name="confirmPassword"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Confirm Password</FormLabel>
+                <FormLabel className="text-gray-700 dark:text-gray-300">Confirm Password</FormLabel>
                 <FormControl>
-                  <Input 
+                  <Input
                     {...field}
                     disabled={loading}
                     placeholder="Confirm your password"
                     type="password"
+                    className="bg-white/40 dark:bg-gray-900/40 backdrop-blur-sm border-0 ring-1 ring-black/5 dark:ring-white/5"
                   />
                 </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
+
           <Button
             type="submit"
-            className="w-full"
             disabled={loading}
+            className="w-full bg-gray-900 hover:bg-gray-800 text-white dark:bg-white dark:hover:bg-gray-100 dark:text-gray-900 transition-colors"
           >
-            Create Account
+            {loading ? "Creating account..." : "Create account"}
           </Button>
         </form>
       </Form>
 
-      <div className="mt-4 text-center text-sm text-muted-foreground">
-        Already have an account?{' '}
-        <Link 
-          href="/signin"
-          className="underline underline-offset-4 hover:text-primary"
-        >
-          Sign in
-        </Link>
+      <div className="mt-6 space-y-4 text-center">
+        <p className="text-sm text-gray-600 dark:text-gray-400">
+          Already have an account?{' '}
+          <Link
+            href="/signin"
+            className="font-medium text-gray-900 hover:text-gray-700 dark:text-white dark:hover:text-gray-300"
+          >
+            Sign in instead
+          </Link>
+        </p>
+
+        <p className="text-xs text-gray-500 dark:text-gray-500">
+          By creating an account, you agree to our{' '}
+          <Link href="#" className="text-gray-900 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white">
+            Terms of Service
+          </Link>
+          {' '}and{' '}
+          <Link href="#" className="text-gray-900 hover:text-gray-700 dark:text-gray-300 dark:hover:text-white">
+            Privacy Policy
+          </Link>
+        </p>
       </div>
-    </div>
+    </>
   );
 }

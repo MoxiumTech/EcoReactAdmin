@@ -5,8 +5,9 @@ import { useRouter } from 'next/navigation';
 import axios from 'axios';
 import { toast } from 'react-hot-toast';
 
-interface AuthUser {
+export interface AuthUser {
   id: string;
+  userId?: string; // From JWT token
   email: string;
   role: 'admin' | 'customer';
   storeId?: string;
@@ -50,7 +51,18 @@ export function useAuthCheck() {
   const checkAuth = async () => {
     try {
       const response = await axios.get('/api/auth/session');
-      setUser(response.data.user);
+      const sessionData = response.data;
+      
+      // Format the user data with session information
+      const userData: AuthUser = {
+        id: sessionData.user.id,
+        userId: sessionData.user.userId,
+        email: sessionData.user.email,
+        role: sessionData.user.role,
+        storeId: sessionData.user.storeId // This comes from the JWT token
+      };
+      
+      setUser(userData);
     } catch (error) {
       setUser(null);
     }
