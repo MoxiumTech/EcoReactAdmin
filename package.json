@@ -47,6 +47,7 @@
     "eslint-config-next": "13.4.5",
     "framer-motion": "^12.4.1",
     "gsap": "^3.12.7",
+    "jose": "^5.9.6",
     "jsonwebtoken": "^9.0.2",
     "lenis": "^1.1.20",
     "lucide-react": "^0.244.0",

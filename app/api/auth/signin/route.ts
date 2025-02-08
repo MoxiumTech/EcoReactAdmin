@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import bcrypt from "bcryptjs";
-import jwt from "jsonwebtoken";
 import prismadb from "@/lib/prismadb";
-import { getAuthCookie } from "@/lib/auth";
+import { getAuthCookie, verifyPassword, generateAdminToken } from "@/lib/auth";
 
 export async function POST(
   req: Request,
@@ -27,8 +25,8 @@ export async function POST(
       return new NextResponse("Invalid credentials", { status: 401 });
     }
 
-    // Check password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
+    // Check password using auth utility
+    const isPasswordValid = await verifyPassword(password, user.password);
 
     if (!isPasswordValid) {
       return new NextResponse("Invalid credentials", { status: 401 });
@@ -77,12 +75,11 @@ export async function POST(
       return new NextResponse("No accessible stores found", { status: 403 });
     }
 
-    // Generate token
-    const token = jwt.sign(
-      { userId: user.id, email: user.email, role: 'admin' },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
+    // Generate token using auth utility
+    const token = await generateAdminToken({ 
+      id: user.id, 
+      email: user.email 
+    });
 
     // Set cookie with proper configuration for root domain only
     const cookieStore = await cookies();

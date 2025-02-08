@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
-import { getRequiredPermissionForRoute, withPermissionCheck } from '@/lib/permission-middleware';
+import { getRequiredPermissionForRoute } from '@/lib/permission-middleware';
+import { verifyJWT } from '@/lib/auth-edge';
 
 // List of public routes that don't require authentication
 const publicRoutes = ['/signin', '/signup', '/accept-invite'];
@@ -68,14 +69,20 @@ export async function middleware(request: NextRequest) {
         // Check if route requires permissions
         const requiredPermission = getRequiredPermissionForRoute(pathname);
         if (requiredPermission) {
-          const permissionCheck = await withPermissionCheck(
-            request,
-            storeId,
-            requiredPermission
-          );
-          
-          if (permissionCheck) {
-            return permissionCheck; // Return error response if permission check failed
+          // Get admin token
+          const adminToken = request.cookies.get('admin_token')?.value;
+          if (!adminToken) {
+            return new NextResponse("Unauthorized", { status: 401 });
+          }
+
+          try {
+            // Verify token using Edge-compatible verification
+            const session = await verifyJWT(adminToken);
+            if (!session || session.role !== 'admin') {
+              return new NextResponse("Unauthorized", { status: 401 });
+            }
+          } catch (error) {
+            return new NextResponse("Invalid token", { status: 401 });
           }
         }
       }
@@ -91,9 +98,18 @@ export async function middleware(request: NextRequest) {
       }
 
       // Check customer auth for protected storefront routes
-      const customerToken = await request.cookies.get('customer_token')?.value;
+      const customerToken = request.cookies.get('customer_token')?.value;
       if (!customerToken) {
         return new NextResponse("Unauthorized", { status: 401 });
+      }
+
+      try {
+        const session = await verifyJWT(customerToken);
+        if (!session || session.role !== 'customer') {
+          return new NextResponse("Unauthorized", { status: 401 });
+        }
+      } catch (error) {
+        return new NextResponse("Invalid token", { status: 401 });
       }
 
       return NextResponse.next();
@@ -107,11 +123,22 @@ export async function middleware(request: NextRequest) {
       }
 
       // Check admin auth for dashboard routes
-      const adminToken = await request.cookies.get('admin_token')?.value;
+      const adminToken = request.cookies.get('admin_token')?.value;
       const isPublic = publicRoutes.includes(pathname);
 
       if (!adminToken && !isPublic) {
         return NextResponse.redirect(new URL('/signin', request.url));
+      }
+
+      if (adminToken && !isPublic) {
+        try {
+          const session = await verifyJWT(adminToken);
+          if (!session || session.role !== 'admin') {
+            return NextResponse.redirect(new URL('/signin', request.url));
+          }
+        } catch (error) {
+          return NextResponse.redirect(new URL('/signin', request.url));
+        }
       }
 
       return NextResponse.next();
@@ -119,30 +146,23 @@ export async function middleware(request: NextRequest) {
 
     // Check if on root domain
     const isRootDomain = normalizedHostname === normalizedMainDomain;
-    console.log('[MIDDLEWARE] Domain Check:', {
-      hostname,
-      MAIN_DOMAIN,
-      isRootDomain,
-      pathname
-    });
 
     if (isRootDomain) {
-      const adminToken = await request.cookies.get('admin_token')?.value;
-      console.log('[MIDDLEWARE] Cookie Debug:', {
-        allCookies: request.cookies.getAll(),
-        adminTokenValue: adminToken,
-        cookieKeys: request.cookies.getAll().map(c => c.name),
-        domain: process.env.MAIN_DOMAIN,
-        host: request.headers.get('host')
-      });
+      const adminToken = request.cookies.get('admin_token')?.value;
 
       if (adminToken) {
-        // Token verification will happen in admin domain
-        const redirectUrl = new URL(`http://${process.env.ADMIN_DOMAIN}/overview`);
-        console.log('[MIDDLEWARE] Redirecting to:', redirectUrl.toString());
-        return NextResponse.redirect(redirectUrl);
+        try {
+          const session = await verifyJWT(adminToken);
+          if (session && session.role === 'admin') {
+            // Token verification successful, redirect to admin domain
+            const redirectUrl = new URL(`http://${process.env.ADMIN_DOMAIN}/overview`);
+            return NextResponse.redirect(redirectUrl);
+          }
+        } catch (error) {
+          // Invalid token, show landing page
+          return NextResponse.next();
+        }
       }
-      console.log('[MIDDLEWARE] No admin token, showing landing page');
       return NextResponse.next();
     }
 
@@ -174,8 +194,17 @@ export async function middleware(request: NextRequest) {
                             pathname.startsWith('/orders') ||
                             pathname.startsWith('/checkout');
     if (isStoreAuthRoute) {
-      const customerToken = await request.cookies.get('customer_token')?.value;
+      const customerToken = request.cookies.get('customer_token')?.value;
       if (!customerToken) {
+        return NextResponse.redirect(new URL(`/store/${storeDomain}/signin`, request.url));
+      }
+
+      try {
+        const session = await verifyJWT(customerToken);
+        if (!session || session.role !== 'customer') {
+          return NextResponse.redirect(new URL(`/store/${storeDomain}/signin`, request.url));
+        }
+      } catch (error) {
         return NextResponse.redirect(new URL(`/store/${storeDomain}/signin`, request.url));
       }
     }

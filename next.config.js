@@ -1,5 +1,13 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Set middleware to use Edge Runtime
+  middleware: {
+    runtime: 'edge',
+  },
+  // Set environment variable for runtime detection
+  env: {
+    RUNTIME_ENV: 'node', // Default to Node.js runtime for API routes
+  },
   output: 'standalone',
   outputFileTracing: true,
   images: {
