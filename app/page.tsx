@@ -1,29 +1,23 @@
-import { redirect } from "next/navigation";
-import { getAdminSession, isAdmin } from "@/lib/auth";
-import prismadb from "@/lib/prismadb";
+"use client";
 
-export default async function Home() {
-  const session = await getAdminSession();
+import { LandingNav } from "@/components/landing-nav";
+import { LandingFooter } from "@/components/landing-footer";
+import { HeroSection } from "@/components/ui/landing/hero-section";
+import { FeaturesSection } from "@/components/ui/landing/features-section";
+import { IntegrationsSection } from "@/components/ui/landing/integrations-section";
+import { CTASection } from "@/components/ui/landing/cta-section";
 
-  // If no admin session, redirect to sign in
-  if (!session || !isAdmin(session)) {
-    redirect('/signin');
-  }
-
-  // Get the admin's first store
-  const store = await prismadb.store.findFirst({
-    where: {
-      userId: session.userId
-    }
-  });
-
-  // If no store exists, redirect to store creation
-  if (!store) {
-    redirect('/new');
-    return null;
-  }
-
-  // Redirect to the store's dashboard
-  redirect(`/${store.id}`);
-  return null;
+export default function LandingPage() {
+  return (
+    <>
+      <LandingNav />
+      <main className="flex-1">
+        <HeroSection />
+        <FeaturesSection />
+        <IntegrationsSection />
+        <CTASection />
+      </main>
+      <LandingFooter />
+    </>
+  );
 }

@@ -10,7 +10,7 @@ const SecurityPage = async () => {
   const session = await verifyAuth(token || '');
   
   if (!session?.user?.email) {
-    redirect('/sign-in');
+    redirect('/signin');
   }
 
   const user = await prismadb.user.findUnique({
