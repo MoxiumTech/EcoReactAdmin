@@ -63,7 +63,7 @@ export function Sidebar({ store, stores, isOwner, role }: SidebarProps) {
   const onSignOut = async () => {
     try {
       await handleSignOut();
-      router.push('/sign-in');
+      router.push('/signin');
     } catch (error) {
       console.error('Error signing out:', error);
     }

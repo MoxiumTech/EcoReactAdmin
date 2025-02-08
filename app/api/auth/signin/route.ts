@@ -84,15 +84,27 @@ export async function POST(
       { expiresIn: '7d' }
     );
 
-    // Set cookie with proper configuration
+    // Set cookie with proper configuration for root domain only
     const cookieStore = await cookies();
     const cookieConfig = getAuthCookie(token, 'admin');
+
+    // For local development with lvh.me, the cookie needs to be set for .lvh.me
+    // This will make it accessible from both lvh.me and admin.lvh.me
+    const rootDomain = process.env.MAIN_DOMAIN?.split(':')[0]; // Remove port
+    const baseRootDomain = rootDomain?.startsWith('admin.') ? rootDomain.substring(6) : rootDomain;
+
     cookieStore.set(cookieConfig.name, cookieConfig.value, {
-      httpOnly: cookieConfig.httpOnly,
-      secure: cookieConfig.secure,
-      sameSite: cookieConfig.sameSite as 'lax',
-      path: cookieConfig.path,
-      expires: cookieConfig.expires
+      ...cookieConfig,
+      sameSite: 'lax',
+      path: '/',
+      domain: `.${baseRootDomain}` // Add dot prefix to make it work for all subdomains
+    });
+
+    console.log('[SIGNIN] Setting cookie:', {
+      name: cookieConfig.name,
+      domain: `.${baseRootDomain}`,
+      path: '/',
+      sameSite: 'lax'
     });
 
     return NextResponse.json({

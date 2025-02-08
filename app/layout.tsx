@@ -9,8 +9,8 @@ import { ThemeProvider } from "@/components/providers/theme-provider"
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Admin Dashboard',
-  description: 'Admin Dashboard',
+  title: 'Wine Management Platform',
+  description: 'Premium wine management platform for businesses. Streamline your inventory, sales, and customer relationships.',
 }
 
 export default function RootLayout({
@@ -21,14 +21,16 @@ export default function RootLayout({
   return (
     <html lang="en" suppressHydrationWarning>
       <body className={inter.className}>
-        <ToastProvider />
-        <ModalProvider />
         <ThemeProvider
           attribute="class"
           defaultTheme="system"
           enableSystem
         >
-          {children}
+          <ToastProvider />
+          <ModalProvider />
+          <div className="relative flex min-h-screen flex-col">
+            {children}
+          </div>
         </ThemeProvider>
       </body>
     </html>

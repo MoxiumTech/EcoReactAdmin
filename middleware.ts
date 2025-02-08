@@ -27,11 +27,10 @@ export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const hostname = request.headers.get('host')!;
 
+    const MAIN_DOMAIN = process.env.MAIN_DOMAIN || 'lvh.me:3000';
+    
     // Check if it's the default admin domain
-    const isAdminDomain = hostname === process.env.ADMIN_DOMAIN ||
-                         hostname === 'localhost:3000' ||
-                         hostname === '127.0.0.1:3000' ||
-                         hostname === 'admin.lvh.me:3000';
+    const isAdminDomain = hostname === `admin.${MAIN_DOMAIN}`;
 
     // Log every path exclusion check
     const isNextInternal = pathname.startsWith('/_next');
@@ -114,14 +113,43 @@ export async function middleware(request: NextRequest) {
       return NextResponse.next();
     }
 
+    // Check if on root domain
+    const isRootDomain = hostname === MAIN_DOMAIN;
+    console.log('[MIDDLEWARE] Domain Check:', {
+      hostname,
+      MAIN_DOMAIN,
+      isRootDomain,
+      pathname
+    });
+
+    if (isRootDomain) {
+      const adminToken = await request.cookies.get('admin_token')?.value;
+      console.log('[MIDDLEWARE] Cookie Debug:', {
+        allCookies: request.cookies.getAll(),
+        adminTokenValue: adminToken,
+        cookieKeys: request.cookies.getAll().map(c => c.name),
+        domain: process.env.MAIN_DOMAIN,
+        host: request.headers.get('host')
+      });
+
+      if (adminToken) {
+        // Token verification will happen in admin domain
+        const redirectUrl = new URL(`http://${process.env.ADMIN_DOMAIN}/overview`);
+        console.log('[MIDDLEWARE] Redirecting to:', redirectUrl.toString());
+        return NextResponse.redirect(redirectUrl);
+      }
+      console.log('[MIDDLEWARE] No admin token, showing landing page');
+      return NextResponse.next();
+    }
+
     // Handle store domain routes
     let storeDomain: string;
     
-    if (hostname.includes('lvh.me:3000')) {
-      // Handle local development domain
-      const subdomain = hostname.split('.lvh.me:3000')[0];
-      if (!subdomain || subdomain === 'admin') {
-        return NextResponse.redirect(new URL('http://admin.lvh.me:3000', request.url));
+    if (hostname.includes(MAIN_DOMAIN)) {
+      // Handle domain
+      const subdomain = hostname.split(`.${MAIN_DOMAIN}`)[0];
+      if (subdomain === 'admin') {
+        return NextResponse.next();
       }
       storeDomain = subdomain;
     } else if (hostname.includes('vercel.app')) {

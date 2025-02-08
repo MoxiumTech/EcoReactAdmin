@@ -20,7 +20,7 @@ export const handleSignOut = async () => {
       });
 
       // Force a complete page refresh to clear all state
-      window.location.href = '/sign-in';
+      window.location.href = '/signin';
     }
   } catch (error) {
     console.error('Error during sign out:', error);
