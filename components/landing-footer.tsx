@@ -9,7 +9,7 @@ export function LandingFooter() {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
           <div className="space-y-4">
             <h3 className="font-bold text-xl bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-              StoreForge
+              Moxium
             </h3>
             <p className="text-sm text-muted-foreground">
               The complete solution for modern retail businesses. Transform your operations with our powerful platform.
@@ -104,7 +104,7 @@ export function LandingFooter() {
         </div>
         <div className="mt-12 pt-8 border-t">
           <p className="text-center text-sm text-muted-foreground">
-            © 2024 StoreForge. All rights reserved.
+            © 2024 Moxium. All rights reserved.
           </p>
         </div>
       </div>
