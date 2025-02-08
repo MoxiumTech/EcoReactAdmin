@@ -6,11 +6,11 @@ import { Button } from "@/components/ui/button";
 import { ArrowRight } from "lucide-react";
 import { GridPattern, DiagonalLines } from "@/components/ui/grid-pattern";
 
-const ADMIN_DOMAIN = process.env.NEXT_PUBLIC_ADMIN_DOMAIN;
+const ADMIN_DOMAIN = process.env.ADMIN_DOMAIN;
 
 export function CTASection() {
   if (!ADMIN_DOMAIN) {
-    console.error("NEXT_PUBLIC_ADMIN_DOMAIN is not defined");
+    console.error("ADMIN_DOMAIN is not defined");
   }
 
   return (

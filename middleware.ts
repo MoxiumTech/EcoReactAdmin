@@ -29,8 +29,12 @@ export async function middleware(request: NextRequest) {
 
     const MAIN_DOMAIN = process.env.MAIN_DOMAIN || 'lvh.me:3000';
     
+    // Normalize domains for comparison (remove port in production)
+    const normalizedMainDomain = MAIN_DOMAIN.split(':')[0];
+    const normalizedHostname = hostname.split(':')[0];
+    
     // Check if it's the default admin domain
-    const isAdminDomain = hostname === `admin.${MAIN_DOMAIN}`;
+    const isAdminDomain = normalizedHostname === `admin.${normalizedMainDomain}`;
 
     // Log every path exclusion check
     const isNextInternal = pathname.startsWith('/_next');
@@ -114,7 +118,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Check if on root domain
-    const isRootDomain = hostname === MAIN_DOMAIN;
+    const isRootDomain = normalizedHostname === normalizedMainDomain;
     console.log('[MIDDLEWARE] Domain Check:', {
       hostname,
       MAIN_DOMAIN,
@@ -145,9 +149,9 @@ export async function middleware(request: NextRequest) {
     // Handle store domain routes
     let storeDomain: string;
     
-    if (hostname.includes(MAIN_DOMAIN)) {
+    if (hostname.includes(normalizedMainDomain)) {
       // Handle domain
-      const subdomain = hostname.split(`.${MAIN_DOMAIN}`)[0];
+      const subdomain = hostname.split(`.${normalizedMainDomain}`)[0];
       if (subdomain === 'admin') {
         return NextResponse.next();
       }
