@@ -7,7 +7,7 @@ import { ArrowRight, Shield, Zap } from "lucide-react";
 import { GridPattern, DiagonalLines, DottedPattern } from "@/components/ui/grid-pattern";
 import { HeroIllustration } from "@/components/ui/hero-illustration";
 
-const ADMIN_DOMAIN = process.env.NEXT_PUBLIC_ADMIN_DOMAIN;
+const ADMIN_DOMAIN = process.env.ADMIN_DOMAIN;
 
 const stats = [
   // { label: "Active Stores", value: "2500+" },
@@ -18,7 +18,7 @@ const stats = [
 
 export function HeroSection() {
   if (!ADMIN_DOMAIN) {
-    console.error("NEXT_PUBLIC_ADMIN_DOMAIN is not defined");
+    console.error("ADMIN_DOMAIN is not defined");
   }
 
   return (
