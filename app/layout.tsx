@@ -1,4 +1,3 @@
-export const dynamic = 'force-dynamic';
 import { Inter } from 'next/font/google'
 import type { Metadata } from 'next'
 
@@ -6,6 +5,7 @@ import './globals.css'
 import { ModalProvider } from '@/providers/modal-provider'
 import { ToastProvider } from '@/providers/toast-provider'
 import { ThemeProvider } from "@/components/providers/theme-provider"
+
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
@@ -28,11 +28,9 @@ export default function RootLayout({
         >
           <ToastProvider />
           <ModalProvider />
-          <div className="relative flex min-h-screen flex-col">
-            {children}
-          </div>
+          {children}
         </ThemeProvider>
       </body>
     </html>
-  )
+  );
 }
