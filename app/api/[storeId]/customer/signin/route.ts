@@ -1,7 +1,6 @@
 import { NextResponse } from "next/server";
 import prismadb from "@/lib/prismadb";
-import bcrypt from "bcrypt";
-import { generateTokens } from "@/lib/auth-middleware";
+import { verifyPassword, generateCustomerTokens } from "@/lib/auth";
 
 export async function POST(
   req: Request,
@@ -26,13 +25,17 @@ export async function POST(
       return new NextResponse("Invalid credentials", { status: 401 });
     }
 
-    const isPasswordValid = await bcrypt.compare(password, customer.password);
+    const isPasswordValid = await verifyPassword(password, customer.password);
 
     if (!isPasswordValid) {
       return new NextResponse("Invalid credentials", { status: 401 });
     }
 
-    const { accessToken, refreshToken } = generateTokens(customer.id, params.storeId);
+    const { accessToken, refreshToken } = await generateCustomerTokens({
+      id: customer.id,
+      email: customer.email,
+      storeId: params.storeId
+    });
 
     return NextResponse.json({
       id: customer.id,

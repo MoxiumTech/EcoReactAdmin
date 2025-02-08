@@ -1,81 +1,81 @@
 export enum Permissions {
   // Catalog Management
-  VIEW_PRODUCTS = "VIEW_PRODUCTS",
-  CREATE_PRODUCTS = "CREATE_PRODUCTS",
-  EDIT_PRODUCTS = "EDIT_PRODUCTS",
-  DELETE_PRODUCTS = "DELETE_PRODUCTS",
+  VIEW_PRODUCTS = "products:view",
+  CREATE_PRODUCTS = "products:create",
+  EDIT_PRODUCTS = "products:edit",
+  DELETE_PRODUCTS = "products:delete",
 
-  VIEW_VARIANTS = "VIEW_VARIANTS",
-  CREATE_VARIANTS = "CREATE_VARIANTS",
-  EDIT_VARIANTS = "EDIT_VARIANTS",
-  DELETE_VARIANTS = "DELETE_VARIANTS",
+  VIEW_VARIANTS = "variants:view",
+  CREATE_VARIANTS = "variants:create",
+  EDIT_VARIANTS = "variants:edit",
+  DELETE_VARIANTS = "variants:delete",
 
-  VIEW_ATTRIBUTES = "VIEW_ATTRIBUTES",
-  MANAGE_ATTRIBUTES = "MANAGE_ATTRIBUTES",
+  VIEW_ATTRIBUTES = "attributes:view",
+  MANAGE_ATTRIBUTES = "attributes:manage",
 
-  VIEW_OPTION_TYPES = "VIEW_OPTION_TYPES",
-  MANAGE_OPTION_TYPES = "MANAGE_OPTION_TYPES",
+  VIEW_OPTION_TYPES = "option-types:view",
+  MANAGE_OPTION_TYPES = "option-types:manage",
 
   // Categories & Navigation
-  VIEW_TAXONOMIES = "VIEW_TAXONOMIES",
-  MANAGE_TAXONOMIES = "MANAGE_TAXONOMIES",
-  VIEW_TAXONS = "VIEW_TAXONS",
-  MANAGE_TAXONS = "MANAGE_TAXONS",
+  VIEW_TAXONOMIES = "taxonomies:view",
+  MANAGE_TAXONOMIES = "taxonomies:manage",
+  VIEW_TAXONS = "taxons:view",
+  MANAGE_TAXONS = "taxons:manage",
 
   // Content Management
-  VIEW_BILLBOARDS = "VIEW_BILLBOARDS",
-  MANAGE_BILLBOARDS = "MANAGE_BILLBOARDS",
+  VIEW_BILLBOARDS = "billboards:view",
+  MANAGE_BILLBOARDS = "billboards:manage",
 
-  VIEW_COLORS = "VIEW_COLORS",
-  MANAGE_COLORS = "MANAGE_COLORS",
+  VIEW_COLORS = "colors:view",
+  MANAGE_COLORS = "colors:manage",
 
-  VIEW_SIZES = "VIEW_SIZES",
-  MANAGE_SIZES = "MANAGE_SIZES",
+  VIEW_SIZES = "sizes:view",
+  MANAGE_SIZES = "sizes:manage",
 
   // Order Management
-  VIEW_ORDERS = "VIEW_ORDERS",
-  MANAGE_ORDERS = "MANAGE_ORDERS",
+  VIEW_ORDERS = "orders:view",
+  MANAGE_ORDERS = "orders:manage",
 
   // Inventory Management
-  VIEW_STOCK = "VIEW_STOCK",
-  MANAGE_STOCK = "MANAGE_STOCK",
-  VIEW_STOCK_MOVEMENTS = "VIEW_STOCK_MOVEMENTS",
-  MANAGE_STOCK_MOVEMENTS = "MANAGE_STOCK_MOVEMENTS",
+  VIEW_STOCK = "stock:view",
+  MANAGE_STOCK = "stock:manage",
+  VIEW_STOCK_MOVEMENTS = "stock-movements:view",
+  MANAGE_STOCK_MOVEMENTS = "stock-movements:manage",
 
   // Customer Management
-  VIEW_CUSTOMERS = "VIEW_CUSTOMERS",
-  MANAGE_CUSTOMERS = "MANAGE_CUSTOMERS",
+  VIEW_CUSTOMERS = "customers:view",
+  MANAGE_CUSTOMERS = "customers:manage",
 
   // Supplier Management
-  VIEW_SUPPLIERS = "VIEW_SUPPLIERS",
-  MANAGE_SUPPLIERS = "MANAGE_SUPPLIERS",
+  VIEW_SUPPLIERS = "suppliers:view",
+  MANAGE_SUPPLIERS = "suppliers:manage",
 
   // Analytics & Reviews
-  VIEW_ANALYTICS = "VIEW_ANALYTICS",
-  MANAGE_ANALYTICS = "MANAGE_ANALYTICS",
-  VIEW_REVIEWS = "VIEW_REVIEWS",
-  MANAGE_REVIEWS = "MANAGE_REVIEWS",
+  VIEW_ANALYTICS = "analytics:view",
+  MANAGE_ANALYTICS = "analytics:manage",
+  VIEW_REVIEWS = "reviews:view",
+  MANAGE_REVIEWS = "reviews:manage",
 
   // Store Management
-  VIEW_SETTINGS = "VIEW_SETTINGS",
-  MANAGE_SETTINGS = "MANAGE_SETTINGS",
-  VIEW_STORE = "VIEW_STORE",
-  MANAGE_STORE = "MANAGE_STORE",
+  VIEW_SETTINGS = "settings:view",
+  MANAGE_SETTINGS = "settings:manage",
+  VIEW_STORE = "store:view",
+  MANAGE_STORE = "store:manage",
 
   // Staff & Roles Management
-  VIEW_STAFF = "VIEW_STAFF",
-  MANAGE_STAFF = "MANAGE_STAFF",
-  VIEW_ROLES = "VIEW_ROLES",
-  MANAGE_ROLES = "MANAGE_ROLES",
+  VIEW_STAFF = "staff:view",
+  MANAGE_STAFF = "staff:manage",
+  VIEW_ROLES = "roles:view",
+  MANAGE_ROLES = "roles:manage",
 
   // Brand Management
-  VIEW_BRANDS = "VIEW_BRANDS",
-  MANAGE_BRANDS = "MANAGE_BRANDS",
+  VIEW_BRANDS = "brands:view",
+  MANAGE_BRANDS = "brands:manage",
 
   // Layout Management
-  VIEW_LAYOUTS = "VIEW_LAYOUTS",
-  MANAGE_LAYOUTS = "MANAGE_LAYOUTS",
+  VIEW_LAYOUTS = "layouts:view",
+  MANAGE_LAYOUTS = "layouts:manage",
 
   // Documentation Access
-  VIEW_DOCUMENTATION = "VIEW_DOCUMENTATION"
+  VIEW_DOCUMENTATION = "documentation:view"
 }
