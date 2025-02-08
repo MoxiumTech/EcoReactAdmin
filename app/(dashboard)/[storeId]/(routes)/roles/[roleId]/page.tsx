@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ArrowLeft, Loader2 } from "lucide-react";
 import { Permissions } from "@/types/permissions";
+import { Loader } from "@/components/ui/loader";
 
 interface RoleFormData {
   name: string;
@@ -125,7 +126,10 @@ export default function RolePage() {
   if (!data) {
     return (
       <div className="flex items-center justify-center h-full">
-        <Loader2 className="w-10 h-10 animate-spin text-muted-foreground" />
+       <Loader 
+        simulateProgress={true}
+        status="Loading your Roles..."
+      />
       </div>
     );
   }
@@ -155,7 +159,7 @@ export default function RolePage() {
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+               <Loader  simulateProgress={true}/>
                 Saving...
               </>
             ) : (

@@ -7,7 +7,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { toast } from "react-hot-toast";
 import { useParams, useRouter } from "next/navigation";
 import { ArrowLeft, Loader2 } from "lucide-react";
-
+import { Loader } from "@/components/ui/loader";
 import { Card } from "@/components/ui/card";
 import {
   Tooltip,
@@ -164,7 +164,7 @@ export default function CreateRolePage() {
           >
             {loading ? (
               <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                <Loader status="Loading your content..."/>
                 Creating...
               </>
             ) : (

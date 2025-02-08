@@ -18,6 +18,8 @@ import { useRouter } from "next/navigation";
 import type { LayoutComponent } from "@/types/models";
 import { Card } from "@/components/ui/card";
 import { Layout, AlertCircle, Loader2 } from "lucide-react";
+import { Loader } from "@/components/ui/loader";
+
 
 const configSchema = z.object({
   config: z.object({
@@ -166,7 +168,7 @@ export default function EditComponentDialog({
       return (
         <Card className="p-6">
           <div className="flex items-center justify-center space-x-2 text-muted-foreground">
-            <Loader2 className="h-5 w-5 animate-spin" />
+            <Loader status="Loading your content..."/>
             <p>Loading configuration...</p>
           </div>
         </Card>
