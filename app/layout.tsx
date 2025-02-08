@@ -9,8 +9,8 @@ import { ThemeProvider } from "@/components/providers/theme-provider"
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'Wine Management Platform',
-  description: 'Premium wine management platform for businesses. Streamline your inventory, sales, and customer relationships.',
+  title: 'Moxium - Store Management Platform',
+  description: 'Store management platform for businesses. Streamline your inventory, sales, and customer relationships.',
 }
 
 export default function RootLayout({

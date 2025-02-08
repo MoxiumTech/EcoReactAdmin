@@ -189,16 +189,16 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                     <Input
                       disabled={loading}
                       placeholder={process.env.NODE_ENV === 'development'
-                        ? "e.g., wine1"
-                        : "e.g., wine1.yourdomain.com"}
+                        ? "e.g., store1"
+                        : "e.g., store1.yourdomain.com"}
                       {...field}
                       value={field.value || ''}
                     />
                   </FormControl>
                   <p className="text-sm text-muted-foreground">
                     {process.env.NODE_ENV === 'development'
-                      ? "Enter only the store name (e.g., 'wine1' for wine1.lvh.me:3000)"
-                      : "Enter your full domain (e.g., 'wine1.yourdomain.com')"}
+                      ? "Enter only the store name (e.g., 'store1' for store1.lvh.me:3000)"
+                      : "Enter your full domain (e.g., 'store1.yourdomain.com')"}
                   </p>
                   {storeDomain && (
                     <p className="text-sm text-muted-foreground mt-2">
