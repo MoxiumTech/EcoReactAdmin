@@ -109,11 +109,13 @@ export default function CheckoutPage() {
   }, [domain, form, cart.isInitialized, cart.customerId]);
 
   // Initialize cart if needed
+  const { isInitialized, isLoading, fetchCart } = cart;
+  
   useEffect(() => {
-    if (!cart.isInitialized && !cart.isLoading) {
-      cart.fetchCart();
+    if (!isInitialized && !isLoading) {
+      fetchCart();
     }
-  }, [cart.isInitialized, cart.isLoading, cart.fetchCart]);
+  }, [isInitialized, isLoading, fetchCart]);
 
   const onSubmit = async (data: CheckoutFormValues) => {
     try {

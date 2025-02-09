@@ -2,7 +2,6 @@
 
 import { useEffect } from "react";
 import { useRouter, useParams } from "next/navigation";
-import { toast } from "react-hot-toast";
 
 export default function SignOutPage() {
   const router = useRouter();
@@ -12,25 +11,27 @@ export default function SignOutPage() {
   useEffect(() => {
     const signOut = async () => {
       try {
-        // Simple POST to storefront logout
-        const response = await fetch(`/api/storefront/${domain}/logout`, {
+        // Call our new storefront signout endpoint
+        const response = await fetch(`/api/storefront/${domain}/auth/signout`, {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
+            'Content-Type': 'application/json'
           }
         });
 
         if (!response.ok) {
-          throw new Error("Failed to sign out");
+          throw new Error('Signout failed');
         }
 
-        toast.success("Successfully signed out");
-        router.refresh();
-        router.push(`/store/${domain}/signin`);
+        // Clear local cart state if needed
+        localStorage.removeItem(`cart_${domain}`);
+
+        // Redirect to homepage
+        router.push(`/store/${domain}`);
       } catch (error) {
-        console.error('Signout error:', error);
-        toast.error("Something went wrong");
-        router.push(`/store/${domain}/signin`);
+        console.error('Error signing out:', error);
+        // Still redirect to homepage on error
+        router.push(`/store/${domain}`);
       }
     };
 
@@ -38,10 +39,10 @@ export default function SignOutPage() {
   }, [router, domain]);
 
   return (
-    <div className="flex items-center justify-center min-h-[60vh]">
+    <div className="flex items-center justify-center min-h-[400px]">
       <div className="text-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4" />
-        <p className="text-lg">Signing out...</p>
+        <h1 className="text-xl font-semibold mb-2">Signing out...</h1>
+        <p className="text-muted-foreground">Please wait while we sign you out.</p>
       </div>
     </div>
   );

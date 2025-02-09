@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useParams } from "next/navigation";
+import Image from "next/image";
 import { format } from "date-fns";
 import { Check, X, Package } from "lucide-react";
 
@@ -197,10 +198,12 @@ export default function OrderClient({ initialOrder }: OrderClientProps) {
                   <div key={item.id} className="flex items-center gap-4">
                     {item.variant.images?.[0] && (
                       <div className="relative h-20 w-20">
-                        <img
+                        <Image
                           src={item.variant.images[0].url}
                           alt={item.variant.product.name}
                           className="object-cover rounded-md"
+                          fill
+                          sizes="80px"
                         />
                       </div>
                     )}

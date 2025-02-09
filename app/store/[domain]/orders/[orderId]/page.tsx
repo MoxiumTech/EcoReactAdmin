@@ -23,6 +23,7 @@ export default function OrderDetailsPage() {
   const [order, setOrder] = useState<Order | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
+  const timeline = useOrderTimeline(order || {} as Order);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -192,7 +193,7 @@ export default function OrderDetailsPage() {
       </Card>
 
       <OrderTimeline
-        events={useOrderTimeline(order).events}
+        events={timeline.events}
         className="mb-8"
       />
 

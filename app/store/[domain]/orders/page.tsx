@@ -110,7 +110,7 @@ export default function OrdersPage() {
   if (orders.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <p className="text-muted-foreground mb-4">You haven't placed any orders yet</p>
+        <p className="text-muted-foreground mb-4">You haven&apos;t placed any orders yet</p>
         <Link href={`/store/${params.domain}`}>
           <Button>Start Shopping</Button>
         </Link>

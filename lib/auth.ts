@@ -288,17 +288,27 @@ export function getAuthCookie(token: string, role: 'admin' | 'customer', isRefre
     )
   };
 
-  // Only set domain for customer tokens and when host is provided
-  if (role === 'customer' && host) {
-    // Extract the domain from the host
-    // Remove port if present and get the base domain
-    const domain = host.split(':')[0].split('.').slice(-2).join('.');
-    return {
-      ...baseConfig,
-      domain: `.${domain}`, // e.g., .example.com
-    };
+  // Set domain based on role and host
+  if (host) {
+    // Remove port if present
+    const hostname = host.split(':')[0];
+    
+    if (role === 'customer') {
+      // For customer tokens, use exact hostname (subdomain.example.com)
+      return {
+        ...baseConfig,
+        domain: hostname
+      };
+    } else if (role === 'admin') {
+      // For admin tokens, use .example.com to share between main and subdomains
+      const domain = hostname.split('.').slice(-2).join('.');
+      return {
+        ...baseConfig,
+        domain: `.${domain}`
+      };
+    }
   }
 
-  // For admin or when no host is provided
+  // Default when no host provided
   return baseConfig;
 }

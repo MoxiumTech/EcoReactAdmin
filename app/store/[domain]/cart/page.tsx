@@ -14,12 +14,14 @@ export default function CartPage() {
   const cart = useCart();
   const params = useParams();
 
+  const { isInitialized, isLoading, fetchCart } = cart;
+  
   useEffect(() => {
     // Only fetch if not initialized and not loading
-    if (!cart.isInitialized && !cart.isLoading) {
-      cart.fetchCart();
+    if (!isInitialized && !isLoading) {
+      fetchCart();
     }
-  }, [cart.isInitialized, cart.isLoading, cart.fetchCart]);
+  }, [isInitialized, isLoading, fetchCart]);
 
   if (cart.isLoading) {
     return (

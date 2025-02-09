@@ -22,6 +22,7 @@ export default function CheckoutSuccessPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isError, setIsError] = useState(false);
   const orderId = searchParams.get("orderId");
+  const timeline = useOrderTimeline(order || {} as Order);
 
   useEffect(() => {
     const fetchOrder = async () => {
@@ -106,7 +107,7 @@ export default function CheckoutSuccessPage() {
       </div>
 
       <OrderTimeline
-        events={useOrderTimeline(order).events}
+        events={timeline.events}
         className="mb-8"
       />
 
