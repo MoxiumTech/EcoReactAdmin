@@ -86,6 +86,7 @@ model Customer {
   phone     String?
   addresses Address[]
   reviews   ProductReview[]
+  promotions Promotion[]    @relation("CustomerToPromotion")
   createdAt DateTime        @default(now())
   updatedAt DateTime        @default(now())
 

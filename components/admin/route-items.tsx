@@ -148,6 +148,10 @@ const routePermissions: Record<string, {
   '/roles': {
     view: 'roles:view',
     manage: 'roles:manage'
+  },
+  '/promotions': {
+    view: 'promotions:view',
+    manage: 'promotions:manage'
   }
 };
 
@@ -329,6 +333,12 @@ export function useRouteItems({ isOwner }: UseRouteItemsProps) {
           href: `/${params.storeId}/customers`,
           active: pathname === `/${params.storeId}/customers`,
           icon: <Users className="h-4 w-4" />
+        },
+        {
+          label: "Promotions",
+          href: `/${params.storeId}/promotions`,
+          active: pathname === `/${params.storeId}/promotions`,
+          icon: <Tags className="h-4 w-4" />
         },
       ]
     },

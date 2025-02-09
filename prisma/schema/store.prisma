@@ -29,6 +29,7 @@ model Store {
   roleAssignments RoleAssignment[] @relation("StoreToRoleAssignment")
   staffInvitations StaffInvitation[] @relation("StoreToStaffInvitation")
   roles           Role[]           @relation("StoreToRole")
+  promotions      Promotion[]      @relation("StoreToPromotion")
 
   @@index([userId])
 }
