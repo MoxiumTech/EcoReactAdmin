@@ -55,7 +55,8 @@ export default function OrdersPage() {
           return;
         }
 
-        const response = await fetch(`/api/storefront/${customer.storeId}/orders`, {
+        const origin = window.location.origin;
+        const response = await fetch(`${origin}/api/storefront/${customer.storeId}/orders`, {
           credentials: 'include'
         });
 

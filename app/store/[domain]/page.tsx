@@ -1,5 +1,7 @@
 import prismadb from "@/lib/prismadb";
 import { redirect } from "next/navigation";
+import { headers } from "next/headers";
+import { getBaseUrl } from "@/lib/server-utils";
 
 import { Billboard } from "./components/billboard";
 import { ProductsList } from "./components/products-list";
@@ -8,13 +10,27 @@ import { CategoriesGrid } from "./components/categories-grid";
 import { ProductsCarousel } from "./components/products-carousel";
 import { SlidingBanners } from "./components/sliding-banners";
 
-interface ComponentConfig {
-  label?: string;
-  imageUrl?: string;
-  title?: string;
-  products?: any[];
-  categories?: any[];
-  banners?: Array<{
+interface BillboardConfig {
+  label: string;
+  imageUrl: string;
+}
+
+interface BannerConfig {
+  label: string;
+  imageUrl: string;
+}
+
+interface ProductsConfig {
+  title: string;
+  products: any[];
+}
+
+interface CategoriesConfig {
+  categories: any[];
+}
+
+interface SlidingBannersConfig {
+  banners: Array<{
     id: string;
     label: string;
     imageUrl: string;
@@ -22,6 +38,8 @@ interface ComponentConfig {
   }>;
   interval?: number;
 }
+
+type ComponentConfig = BillboardConfig | BannerConfig | ProductsConfig | CategoriesConfig | SlidingBannersConfig;
 
 interface LayoutComponent {
   id: string;
@@ -36,39 +54,31 @@ const HomePage = async ({
 }: {
   params: { domain: string }
 }) => {
-  // Get the store by domain
-  const store = await prismadb.$queryRaw<Array<any>>`
-    SELECT s.*, json_agg(t.*) as taxonomies
-    FROM "Store" s
-    LEFT JOIN "Taxonomy" t ON t."storeId" = s.id
-    WHERE s.domain = ${params.domain}
-    GROUP BY s.id
-  `;
+  // Get the store
+  const store = await prismadb.store.findFirst({
+    where: {
+      domain: params.domain
+    }
+  });
 
-  if (!store[0]) {
+  if (!store) {
     redirect('/');
   }
 
-  // Get active layout with components
-  const layout = await prismadb.$queryRaw<Array<any>>`
-    SELECT l.*, 
-           json_agg(
-             json_build_object(
-               'id', c.id,
-               'type', c.type,
-               'config', c.config,
-               'position', c.position,
-               'isVisible', c."isVisible"
-             ) ORDER BY c.position
-           ) FILTER (WHERE c.id IS NOT NULL) as components
-    FROM "HomeLayout" l
-    LEFT JOIN "LayoutComponent" c ON c."layoutId" = l.id
-    WHERE l."storeId" = ${store[0].id}
-      AND l."isActive" = true
-    GROUP BY l.id
-  `;
+  // Get store details with taxonomies
+  const baseUrl = getBaseUrl();
+  const storeDetailsRes = await fetch(`${baseUrl}/api/storefront/${store.id}/store/details`);
+  if (!storeDetailsRes.ok) {
+    throw new Error('Failed to fetch store details');
+  }
+  const storeDetails = await storeDetailsRes.json();
 
-  const activeLayout = layout[0];
+  // Get active layout with components
+  const layoutRes = await fetch(`${baseUrl}/api/storefront/${store.id}/store/layout`);
+  if (!layoutRes.ok) {
+    throw new Error('Failed to fetch layout');
+  }
+  const activeLayout = await layoutRes.json();
   const components = activeLayout?.components || [];
 
   return (
@@ -82,47 +92,47 @@ const HomePage = async ({
               case 'billboard':
                 return (
                   <Billboard
-                    data={component.config}
+                    data={component.config as BillboardConfig}
                   />
                 );
               case 'featured-products':
                 return (
                   <ProductsList
                     title="Featured Products"
-                    items={component.config.products || []}
+                    items={(component.config as ProductsConfig).products || []}
                   />
                 );
               case 'banner':
                 return (
                   <BannerComponent
-                    data={component.config}
+                    data={component.config as BannerConfig}
                   />
                 );
               case 'categories':
                 return (
                   <CategoriesGrid
-                    categories={component.config.categories || []}
+                    categories={(component.config as CategoriesConfig).categories || []}
                   />
                 );
               case 'products-grid':
                 return (
                   <ProductsList
-                    title={component.config.title || "Products"}
-                    items={component.config.products || []}
+                    title={(component.config as ProductsConfig).title || "Products"}
+                    items={(component.config as ProductsConfig).products || []}
                   />
                 );
               case 'products-carousel':
                 return (
                   <ProductsCarousel
-                    title={component.config.title || "Products"}
-                    items={component.config.products || []}
+                    title={(component.config as ProductsConfig).title || "Products"}
+                    items={(component.config as ProductsConfig).products || []}
                   />
                 );
               case 'sliding-banners':
                 return (
                   <SlidingBanners
-                    banners={component.config.banners || []}
-                    interval={component.config.interval || 5000}
+                    banners={(component.config as SlidingBannersConfig).banners || []}
+                    interval={(component.config as SlidingBannersConfig).interval || 5000}
                   />
                 );
               default:

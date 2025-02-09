@@ -68,7 +68,8 @@ export default function ProfilePage() {
         }
 
         // Use storeId from customer session
-        const profileResponse = await fetch(`/api/storefront/${customer.storeId}/profile`, {
+        const origin = window.location.origin;
+        const profileResponse = await fetch(`${origin}/api/storefront/${customer.storeId}/profile`, {
           credentials: 'include'
         });
         if (profileResponse.ok) {
@@ -110,7 +111,8 @@ export default function ProfilePage() {
   const onSubmit = async (data: ProfileFormValues) => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/storefront/${storeId}/profile`, {
+      const origin = window.location.origin;
+      const response = await fetch(`${origin}/api/storefront/${storeId}/profile`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
