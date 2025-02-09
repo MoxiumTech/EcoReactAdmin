@@ -13,6 +13,11 @@ model Order {
   updatedAt      DateTime        @default(now())
   promotions     Promotion[]     @relation("OrderToPromotion")
   orderPromotions OrderPromotion[]
+  emailDiscount   Decimal       @default(0)
+  customerDiscount Decimal       @default(0)
+  couponDiscount  Decimal       @default(0)
+  totalAmount     Decimal       @default(0)
+  finalAmount     Decimal       @default(0)
 
   @@index([storeId])
   @@index([customerId])

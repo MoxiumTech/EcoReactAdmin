@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { getAuthCookie, generateCustomerToken, verifyPassword, getCustomerByEmail } from "@/lib/auth";
+import { getAuthCookie, generateCustomerTokens, verifyPassword, getCustomerByEmail } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
 
 export async function POST(
@@ -29,11 +29,11 @@ export async function POST(
       return new NextResponse("Invalid credentials", { status: 401 });
     }
 
-    // Generate token with correct payload structure
-    const token = generateCustomerToken({
+    // Generate tokens
+    const { accessToken } = await generateCustomerTokens({
       id: customer.id,
       email: customer.email,
-      storeId: storeId // Using storeId from params
+      storeId: storeId
     });
 
     console.log('[AUTH_DEBUG] Generated token payload:', {
@@ -44,7 +44,7 @@ export async function POST(
 
     // Set cookie
     const cookieStore = cookies();
-    const cookieConfig = getAuthCookie(token, 'customer');
+    const cookieConfig = getAuthCookie(accessToken, 'customer');
     cookieStore.set(cookieConfig.name, cookieConfig.value, {
       httpOnly: cookieConfig.httpOnly,
       secure: cookieConfig.secure,
