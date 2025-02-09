@@ -7,129 +7,71 @@ import {
   TooltipTrigger
 } from "@/components/ui/tooltip";
 import { Badge } from "@/components/ui/badge";
-
-const PermissionCategories = {
-  catalog: {
-    title: "Catalog Structure",
-    permissions: ['taxonomies:view', 'taxonomies:manage', 'taxons:view', 'taxons:manage'],
-    description: "Access to manage store's category structure and organization"
-  },
-  products: {
-    title: "Product Management",
-    permissions: ['products:view', 'products:create', 'products:edit', 'products:delete'],
-    description: "Access to manage products and their details"
-  },
-  variants: {
-    title: "Variant Management",
-    permissions: ['variants:view', 'variants:create', 'variants:edit', 'variants:delete'],
-    description: "Access to manage product variants and options"
-  },
-  orders: {
-    title: "Order Management",
-    permissions: ['orders:view', 'orders:manage'],
-    description: "Access to view and manage customer orders"
-  },
-  customers: {
-    title: "Customer Management",
-    permissions: ['customers:view', 'customers:manage'],
-    description: "Access to customer information and management"
-  },
-  settings: {
-    title: "Settings",
-    permissions: ['settings:view', 'settings:manage'],
-    description: "Access to store settings and configuration"
-  },
-  roles: {
-    title: "Role Management",
-    permissions: ['roles:view', 'roles:manage'],
-    description: "Access to manage staff roles and permissions"
-  },
-  attributes: {
-    title: "Attribute Management",
-    permissions: ['attributes:view', 'attributes:manage', 'option-types:view', 'option-types:manage'],
-    description: "Access to manage product attributes and option types"
-  },
-  suppliers: {
-    title: "Supplier Management",
-    permissions: ['suppliers:view', 'suppliers:manage'],
-    description: "Access to manage product suppliers"
-  },
-  store: {
-    title: "Store Management",
-    permissions: ['store:view', 'store:manage'],
-    description: "Access to overall store management"
-  },
-  content: {
-    title: "Content Management",
-    permissions: [
-      'layouts:view', 'layouts:manage',
-      'billboards:view', 'billboards:manage',
-      'reviews:view', 'reviews:manage'
-    ],
-    description: "Access to manage store content, layouts, and marketing"
-  },
-  categories: {
-    title: "Category Management",
-    permissions: ['categories:view', 'categories:manage'],
-    description: "Access to manage store categories and taxonomy"
-  },
-  brands: {
-    title: "Brand Management",
-    permissions: ['brands:view', 'brands:manage'],
-    description: "Access to manage product brands"
-  },
-  stock: {
-    title: "Inventory Management",
-    permissions: [
-      'stock:view', 'stock:manage', 
-      'stock-movements:view', 'stock-movements:manage'
-    ],
-    description: "Access to manage product stock levels and movements"
-  },
-  analytics: {
-    title: "Analytics & Reports",
-    permissions: ['analytics:view', 'analytics:manage'],
-    description: "Access to view and manage store analytics and reports"
-  }
-};
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { Button } from "@/components/ui/button";
+import { ChevronRightIcon, ChevronDownIcon } from "lucide-react";
+import { useState } from "react";
+import { permissionCategories } from "./permissions";
 
 interface PermissionDisplayProps {
   permissions: string[];
   showDetails?: boolean;
+  maxHeight?: string;
 }
 
 export const PermissionDisplay: React.FC<PermissionDisplayProps> = ({
   permissions,
-  showDetails = false
+  showDetails = false,
+  maxHeight = "600px"
 }) => {
   // Group permissions by category
-  const groupedPermissions = Object.entries(PermissionCategories).map(([key, category]) => {
-    const categoryPermissions = permissions.filter(p => category.permissions.includes(p));
-    return {
-      key,
-      title: category.title,
-      description: category.description,
-      permissions: categoryPermissions,
-      hasView: categoryPermissions.some(p => p.endsWith(':view')),
-      hasManage: categoryPermissions.some(p => p.endsWith(':manage'))
-    };
-  }).filter(category => category.permissions.length > 0);
+  const groupedPermissions = Object.entries(permissionCategories)
+    .map(([key, category]) => {
+      const categoryPermissions = category.permissions.filter(p => 
+        permissions.includes(p.id)
+      );
+
+      if (categoryPermissions.length === 0) return null;
+
+      return {
+        key,
+        title: category.label,
+        description: category.description,
+        permissions: categoryPermissions,
+        hasView: categoryPermissions.some(p => p.id.endsWith(':view')),
+        hasManage: categoryPermissions.some(p => p.id.endsWith(':manage')),
+        hasOther: categoryPermissions.some(p => 
+          !p.id.endsWith(':view') && !p.id.endsWith(':manage')
+        )
+      };
+    })
+    .filter(Boolean);
 
   if (!showDetails) {
     return (
-      <div className="flex flex-wrap gap-1">
-        {groupedPermissions.map(category => (
+      <div className="flex flex-wrap gap-1.5">
+        {groupedPermissions.map(category => category && (
           <TooltipProvider key={category.key}>
             <Tooltip>
-              <TooltipTrigger>
-                <Badge variant={category.hasManage ? "default" : "secondary"}>
+              <TooltipTrigger asChild>
+                <Badge
+                  variant={getVariantForPermissions(category)}
+                  className="cursor-help"
+                >
                   {category.title}
                 </Badge>
               </TooltipTrigger>
               <TooltipContent>
                 <p className="text-sm">{category.description}</p>
                 <p className="text-xs mt-1 text-muted-foreground">
-                  {category.hasManage ? "Full access" : "View only"}
+                  {getAccessLevelText(category)}
                 </p>
               </TooltipContent>
             </Tooltip>
@@ -140,28 +82,148 @@ export const PermissionDisplay: React.FC<PermissionDisplayProps> = ({
   }
 
   return (
-    <div className="space-y-4">
-      {groupedPermissions.map(category => (
-        <div key={category.key} className="border rounded-lg p-4">
-          <div className="flex items-center justify-between">
-            <h3 className="font-semibold">{category.title}</h3>
-            <Badge variant={category.hasManage ? "default" : "secondary"}>
-              {category.hasManage ? "Full Access" : "View Only"}
-            </Badge>
-          </div>
-          <p className="text-sm text-muted-foreground mt-1">{category.description}</p>
-          <div className="mt-2">
-            <h4 className="text-sm font-medium">Available Actions:</h4>
-            <ul className="mt-1 text-sm text-muted-foreground">
-              {category.permissions.map(permission => (
-                <li key={permission} className="flex items-center gap-2">
-                  • {permission.split(':')[1].charAt(0).toUpperCase() + permission.split(':')[1].slice(1)}
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      ))}
-    </div>
+    <ScrollArea className={`pr-4 ${maxHeight ? `max-h-[${maxHeight}]` : ''}`}>
+      <div className="space-y-4">
+        {groupedPermissions.map(category => category && (
+          <CategoryCard
+            key={category.key}
+            category={category}
+          />
+        ))}
+      </div>
+    </ScrollArea>
   );
 };
+
+interface CategoryCardProps {
+  category: {
+    key: string;
+    title: string;
+    description: string;
+    permissions: {
+      id: string;
+      label: string;
+      description: string;
+    }[];
+    hasView: boolean;
+    hasManage: boolean;
+    hasOther: boolean;
+  };
+}
+
+const CategoryCard: React.FC<CategoryCardProps> = ({ category }) => {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  const viewPermissions = category.permissions.filter(p => p.id.endsWith(':view'));
+  const managePermissions = category.permissions.filter(p => p.id.endsWith(':manage'));
+  const otherPermissions = category.permissions.filter(p => 
+    !p.id.endsWith(':view') && !p.id.endsWith(':manage')
+  );
+
+  return (
+    <Card className="p-4">
+      <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+        <div className="flex items-center justify-between">
+          <CollapsibleTrigger asChild>
+            <Button variant="ghost" className="p-0 hover:bg-transparent">
+              <div className="flex items-center gap-2">
+                {isExpanded ? (
+                  <ChevronDownIcon className="h-4 w-4" />
+                ) : (
+                  <ChevronRightIcon className="h-4 w-4" />
+                )}
+                <div className="text-left">
+                  <h3 className="text-sm font-semibold">
+                    {category.title}
+                  </h3>
+                  <p className="text-xs text-muted-foreground">
+                    {category.description}
+                  </p>
+                </div>
+              </div>
+            </Button>
+          </CollapsibleTrigger>
+          <div className="flex gap-2">
+            {viewPermissions.length > 0 && (
+              <Badge variant="outline">View</Badge>
+            )}
+            {managePermissions.length > 0 && (
+              <Badge variant="default">Manage</Badge>
+            )}
+            {otherPermissions.length > 0 && (
+              <Badge variant="secondary">Other</Badge>
+            )}
+          </div>
+        </div>
+
+        <CollapsibleContent>
+          <Separator className="my-4" />
+          <div className="grid grid-cols-2 gap-4">
+            {viewPermissions.map(permission => (
+              <TooltipProvider key={permission.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-sm text-muted-foreground cursor-help">
+                      {permission.label}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{permission.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+            {managePermissions.map(permission => (
+              <TooltipProvider key={permission.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-sm font-medium cursor-help">
+                      {permission.label}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{permission.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+            {otherPermissions.map(permission => (
+              <TooltipProvider key={permission.id}>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="text-sm text-muted-foreground cursor-help">
+                      {permission.label}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>{permission.description}</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            ))}
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+    </Card>
+  );
+};
+
+function getVariantForPermissions(category: {
+  hasView: boolean;
+  hasManage: boolean;
+  hasOther: boolean;
+}): "default" | "secondary" | "outline" {
+  if (category.hasManage) return "default";
+  if (category.hasOther) return "secondary";
+  return "outline";
+}
+
+function getAccessLevelText(category: {
+  hasView: boolean;
+  hasManage: boolean;
+  hasOther: boolean;
+}): string {
+  if (category.hasManage) return "Full Access";
+  if (category.hasOther) return "Partial Access";
+  return "View Only";
+}

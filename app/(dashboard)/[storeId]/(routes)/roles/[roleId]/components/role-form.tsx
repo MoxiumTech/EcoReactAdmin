@@ -1,160 +1,150 @@
 "use client";
 
-import * as z from "zod";
 import { useState } from "react";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 import { toast } from "react-hot-toast";
-import { useParams, useRouter } from "next/navigation";
-import { Input } from "@/components/ui/input";
+import axios from "axios";
+
 import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Separator } from "@/components/ui/separator";
 import { Heading } from "@/components/ui/heading";
-import { AlertModal } from "@/components/modals/alert-modal";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Permissions } from "@/types/permissions";
+import { ArrowLeft } from "lucide-react";
+import { PermissionSelector } from "../../components/permissions";
 
 const formSchema = z.object({
-  name: z.string().min(1),
-  description: z.string().optional(),
-  permissions: z.array(z.string()).min(1, {
-    message: "At least one permission must be selected",
-  }),
+  name: z.string().min(1, "Name is required"),
+  description: z.string().min(1, "Description is required"),
+  permissions: z.array(z.string()).min(1, "At least one permission is required"),
 });
 
 type RoleFormValues = z.infer<typeof formSchema>;
 
-import { Role } from "@/types/role";
-
 interface RoleFormProps {
-  initialData: Role | null;
+  initialData: {
+    name: string;
+    description: string;
+    permissions: string[];
+  };
+  storeId: string;
+  roleId: string;
 }
 
 export const RoleForm: React.FC<RoleFormProps> = ({
-  initialData
+  initialData,
+  storeId,
+  roleId,
 }) => {
-  const params = useParams();
   const router = useRouter();
-
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const title = initialData ? 'Edit role' : 'Create role';
-  const description = initialData ? 'Edit a role' : 'Add a new role';
-  const toastMessage = initialData ? 'Role updated.' : 'Role created.';
-  const action = initialData ? 'Save changes' : 'Create';
+  const [selectedPermissions, setSelectedPermissions] = useState<Set<string>>(
+    new Set(initialData.permissions)
+  );
 
   const form = useForm<RoleFormValues>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: initialData?.name || "",
-      description: initialData?.description || "",
-        permissions: initialData?.permissions?.map((p) => p.name) || [],
-    }
+    defaultValues: initialData,
   });
+
+  const handlePermissionToggle = (permissionId: string, checked: boolean) => {
+    const newPermissions = new Set(selectedPermissions);
+    if (checked) {
+      newPermissions.add(permissionId);
+    } else {
+      newPermissions.delete(permissionId);
+    }
+    setSelectedPermissions(newPermissions);
+    form.setValue('permissions', Array.from(newPermissions), {
+      shouldValidate: true
+    });
+  };
 
   const onSubmit = async (data: RoleFormValues) => {
     try {
       setLoading(true);
-      
-      const url = initialData 
-        ? `/api/${params.storeId}/roles/${params.roleId}`
-        : `/api/${params.storeId}/roles`;
-        
-      const response = await fetch(url, {
-        method: initialData ? 'PATCH' : 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...data,
-          permissionNames: data.permissions
-        }),
+
+      const response = await axios.patch(`/api/${storeId}/roles/${roleId}`, {
+        name: data.name,
+        description: data.description,
+        permissions: data.permissions,
       });
 
-      if (!response.ok) {
-        throw new Error('Something went wrong');
+      if (response.status === 200) {
+        toast.success("Role updated successfully");
+        router.push(`/${storeId}/roles`);
+        router.refresh();
+      } else {
+        toast.error("Failed to update role");
       }
-
-      router.refresh();
-      router.push(`/${params.storeId}/roles`);
-      toast.success(toastMessage);
-    } catch (error: any) {
-      toast.error('Something went wrong.');
+    } catch (error) {
+      toast.error("Something went wrong");
     } finally {
       setLoading(false);
     }
   };
-
-  const onDelete = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch(`/api/${params.storeId}/roles/${params.roleId}`, {
-        method: 'DELETE'
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to delete role');
-      }
-
-      router.refresh();
-      router.push(`/${params.storeId}/roles`);
-      toast.success('Role deleted.');
-    } catch (error: any) {
-      toast.error('Something went wrong.');
-    } finally {
-      setLoading(false);
-      setOpen(false);
-    }
-  };
-
-  const permissionsList = Object.entries(Permissions).map(([key, value]) => ({
-    id: value,
-    label: key.split('_').map(word => word.charAt(0) + word.slice(1).toLowerCase()).join(' '),
-  }));
 
   return (
-    <>
-      <AlertModal 
-        isOpen={open} 
-        onClose={() => setOpen(false)}
-        onConfirm={onDelete}
-        loading={loading}
-      />
+    <div className="flex-1 space-y-4 p-8 pt-6">
       <div className="flex items-center justify-between">
-        <Heading title={title} description={description} />
-        {initialData && (
+        <div className="flex items-center space-x-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => router.push(`/${storeId}/roles`)}
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Roles
+          </Button>
+          <Separator orientation="vertical" className="h-6" />
+          <Heading
+            title={`Edit Role: ${form.getValues("name")}`}
+            description="Manage role permissions and access levels"
+          />
+        </div>
+        <div className="flex items-center gap-x-2">
           <Button
             disabled={loading}
-            variant="destructive"
-            size="sm"
-            onClick={() => setOpen(true)}
+            variant="outline"
+            onClick={() => router.push(`/${storeId}/roles`)}
           >
-            Delete
+            Cancel
           </Button>
-        )}
+          <Button
+            disabled={loading}
+            onClick={form.handleSubmit(onSubmit)}
+          >
+            {loading ? "Saving..." : "Save Changes"}
+          </Button>
+        </div>
       </div>
       <Separator />
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full">
-          <div className="grid grid-cols-3 gap-8">
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="grid gap-8 md:grid-cols-2">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Name</FormLabel>
+                  <FormLabel>Role Name</FormLabel>
                   <FormControl>
-                    <Input disabled={loading} placeholder="Role name" {...field} />
+                    <Input 
+                      disabled={loading} 
+                      placeholder="e.g., Marketing Manager"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -167,68 +157,36 @@ export const RoleForm: React.FC<RoleFormProps> = ({
                 <FormItem>
                   <FormLabel>Description</FormLabel>
                   <FormControl>
-                    <Input disabled={loading} placeholder="Role description" {...field} />
+                    <Textarea 
+                      disabled={loading} 
+                      placeholder="Describe the role's responsibilities"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
             />
           </div>
+          <Separator />
           <FormField
             control={form.control}
             name="permissions"
             render={() => (
               <FormItem>
-                <div className="mb-4">
-                  <FormLabel>Permissions</FormLabel>
-                  <FormDescription>
-                    Select the permissions for this role
-                  </FormDescription>
-                </div>
-                <div className="grid grid-cols-2 gap-8">
-                  {permissionsList.map((item) => (
-                    <FormField
-                      key={item.id}
-                      control={form.control}
-                      name="permissions"
-                      render={({ field }) => {
-                        return (
-                          <FormItem
-                            key={item.id}
-                            className="flex flex-row items-start space-x-3 space-y-0"
-                          >
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value?.includes(item.id)}
-                                onCheckedChange={(checked) => {
-                                  return checked
-                                    ? field.onChange([...field.value, item.id])
-                                    : field.onChange(
-                                        field.value?.filter(
-                                          (value: string) => value !== item.id
-                                        )
-                                      )
-                                }}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal">
-                              {item.label}
-                            </FormLabel>
-                          </FormItem>
-                        )
-                      }}
-                    />
-                  ))}
-                </div>
+                <FormLabel>Permissions</FormLabel>
+                <FormControl>
+                  <PermissionSelector
+                    selectedPermissions={selectedPermissions}
+                    onPermissionToggle={handlePermissionToggle}
+                  />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
           />
-          <Button disabled={loading} className="ml-auto" type="submit">
-            {action}
-          </Button>
         </form>
       </Form>
-    </>
+    </div>
   );
 };

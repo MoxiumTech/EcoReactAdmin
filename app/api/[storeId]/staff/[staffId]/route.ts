@@ -4,6 +4,62 @@ import prismadb from "@/lib/prismadb";
 import { checkPermissions } from "@/lib/rbac-middleware";
 import { Permissions } from "@/types/permissions";
 
+export async function GET(
+  req: Request,
+  { params }: { params: { storeId: string; staffId: string } }
+) {
+  try {
+    const session = await getAdminSession();
+
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    // Check if user has permission to view roles
+    const hasPermission = await checkPermissions(
+      session.userId,
+      params.storeId,
+      [Permissions.VIEW_ROLES]
+    );
+
+    if (!hasPermission) {
+      return new NextResponse("Forbidden", { status: 403 });
+    }
+
+    // Get the role assignment with user and role details
+    const roleAssignment = await prismadb.roleAssignment.findUnique({
+      where: {
+        id: params.staffId
+      },
+      include: {
+        user: {
+          select: {
+            id: true,
+            email: true
+          }
+        },
+        role: true
+      }
+    });
+
+    if (!roleAssignment) {
+      return new NextResponse("Staff member not found", { status: 404 });
+    }
+
+    // Format the response
+    const staffData = {
+      id: roleAssignment.id,
+      email: roleAssignment.user.email,
+      roleId: roleAssignment.roleId
+    };
+
+    return NextResponse.json(staffData);
+  } catch (error) {
+    console.error('[STAFF_GET]', error);
+    return new NextResponse("Internal error", { status: 500 });
+  }
+}
+
 export async function DELETE(
   req: Request,
   { params }: { params: { storeId: string; staffId: string } }
@@ -66,14 +122,14 @@ export async function PATCH(
   try {
     const session = await getAdminSession();
     const body = await req.json();
-    const { roleId } = body;
+    const { roleId, email } = body;
 
     if (!session) {
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    if (!roleId) {
-      return new NextResponse("Role ID is required", { status: 400 });
+    if (!roleId || !email) {
+      return new NextResponse("Missing required fields", { status: 400 });
     }
 
     // Check if user has permission to manage roles
@@ -87,18 +143,45 @@ export async function PATCH(
       return new NextResponse("Forbidden", { status: 403 });
     }
 
-    // Update the role assignment
-    const updatedAssignment = await prismadb.roleAssignment.update({
+    // Get the role assignment to update
+    const roleAssignment = await prismadb.roleAssignment.findUnique({
       where: {
         id: params.staffId,
       },
-      data: {
-        roleId
-      },
       include: {
         user: true,
-        role: true
-      }
+      },
+    });
+
+    if (!roleAssignment) {
+      return new NextResponse("Staff member not found", { status: 404 });
+    }
+
+    // Start a transaction to update both user and role assignment
+    const updatedAssignment = await prismadb.$transaction(async (tx) => {
+      // Update user email
+      await tx.user.update({
+        where: {
+          id: roleAssignment.userId,
+        },
+        data: {
+          email,
+        },
+      });
+
+      // Update role assignment
+      return tx.roleAssignment.update({
+        where: {
+          id: params.staffId,
+        },
+        data: {
+          roleId,
+        },
+        include: {
+          user: true,
+          role: true,
+        },
+      });
     });
 
     return NextResponse.json(updatedAssignment);

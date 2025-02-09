@@ -163,30 +163,61 @@ function hasRouteAccess(
   // Find matching route permissions
   for (const [routePath, permissions] of Object.entries(routePermissions)) {
     if (route.includes(routePath)) {
-      // For management actions, check both view and manage permissions
+      // Get base permission name (e.g., 'products' from '/products')
+      const basePermission = routePath.replace('/', '');
+      
       if (requireManage) {
-        const hasView = hasPermission(permissions.view);
-        const hasManage = permissions.manage ? hasPermission(permissions.manage) : true;
-        console.log(`Route ${route} manage check:`, { hasView, hasManage, required: permissions }); // Debug log
-        return hasView && hasManage;
+        // Check for specific action permissions first
+        const hasCreate = hasPermission(`${basePermission}:create`);
+        const hasEdit = hasPermission(`${basePermission}:edit`);
+        const hasDelete = hasPermission(`${basePermission}:delete`);
+        const hasManage = hasPermission(`${basePermission}:manage`);
+        
+        // For management actions, need either specific permissions or manage permission
+        const hasActionPermissions = hasCreate || hasEdit || hasDelete || hasManage;
+        
+        console.log(`Route ${route} manage check:`, { 
+          hasCreate, hasEdit, hasDelete, hasManage,
+          hasActionPermissions
+        });
+        
+        return hasPermission(permissions.view) && hasActionPermissions;
       }
-      // For viewing, only check view permission
+      
+      // For viewing, check both view permission and any management permissions
       const hasView = hasPermission(permissions.view);
-      console.log(`Route ${route} view check:`, { hasView, required: permissions.view }); // Debug log
-      return hasView;
+      const hasAnyManagement = hasPermission(`${basePermission}:manage`) || 
+                              hasPermission(`${basePermission}:create`) ||
+                              hasPermission(`${basePermission}:edit`) ||
+                              hasPermission(`${basePermission}:delete`);
+      
+      console.log(`Route ${route} view check:`, { 
+        hasView, 
+        hasAnyManagement,
+        basePermission
+      });
+      
+      return hasView || hasAnyManagement;
     }
   }
 
   // If no specific permissions are found and user is not owner
-  console.log(`No permissions found for route: ${route}`); // Debug log
+  console.log(`No permissions found for route: ${route}`);
   return false;
 }
 
 // Helper to determine if route requires management permissions
 function isManagementRoute(pathname: string): boolean {
-  return pathname.includes('/create') || 
-         pathname.includes('/edit') || 
-         pathname.includes('/delete');
+  const managementPatterns = [
+    '/create',
+    '/edit',
+    '/delete',
+    '/manage',
+    '/new',
+    '/update'
+  ];
+  
+  return managementPatterns.some(pattern => pathname.includes(pattern));
 }
 
 export function useRouteItems({ isOwner }: UseRouteItemsProps) {
