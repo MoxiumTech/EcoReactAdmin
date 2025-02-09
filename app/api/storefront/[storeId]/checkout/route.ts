@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { getCustomerSession } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
+import { Prisma } from "@prisma/client";
+const Decimal = Prisma.Decimal;
 
 export async function POST(
   req: Request,
@@ -96,15 +98,17 @@ export async function POST(
           }
         });
 
-        // Create stock movement for reservation
+        // Create stock movement for order placement
         await tx.stockMovement.create({
           data: {
             variantId: item.variantId,
             stockItemId: stockItem.id,
-            quantity: item.quantity,
+            orderId: cart.id,
+            quantity: -item.quantity, // Negative to show stock being taken from available inventory
             type: "reserved",
-            reason: `Order ${cart.id} - Initial reservation`,
-            originatorType: "system"
+            reason: `Order ${cart.id} - Items reserved for processing`,
+            originatorType: "customer",
+            originatorId: session.customerId
           }
         });
       }
@@ -128,14 +132,46 @@ export async function POST(
         }
       });
 
-      // Calculate all discounts
-      const emailDiscountAmount = (emailDiscount / 100) * orderTotal;
-      const customerDiscountAmount = (customerDiscount / 100) * orderTotal;
-      const couponDiscountAmount = (couponDiscount / 100) * orderTotal;
-      const totalDiscounts = emailDiscountAmount + customerDiscountAmount + couponDiscountAmount;
-      const finalTotal = orderTotal - totalDiscounts;
+      // Calculate order total and individual discounts
+      const orderTotalDecimal = new Decimal(orderTotal);
+      
+      // Convert percentage discounts to decimals
+      const emailDiscountDecimal = new Decimal(emailDiscount || 0).div(100);
+      const customerDiscountDecimal = new Decimal(customerDiscount || 0).div(100);
+      const couponDiscountDecimal = new Decimal(couponDiscount || 0).div(100);
+      
+      // Calculate discount amounts
+      const emailDiscountAmount = orderTotalDecimal.mul(emailDiscountDecimal);
+      const customerDiscountAmount = orderTotalDecimal.mul(customerDiscountDecimal);
+      const couponDiscountAmount = orderTotalDecimal.mul(couponDiscountDecimal);
+      
+      // Calculate final amount
+      const totalDiscountAmount = emailDiscountAmount
+        .plus(customerDiscountAmount)
+        .plus(couponDiscountAmount);
+      const finalTotal = orderTotalDecimal.minus(totalDiscountAmount);
 
-      // Update order status, payment details, and discounts
+      // Create initial order status records
+      await tx.orderStatusHistory.createMany({
+        data: [
+          {
+            orderId: cart.id,
+            status: "cart",
+            originatorId: session.customerId,
+            originatorType: 'customer',
+            reason: "Order created in cart"
+          },
+          {
+            orderId: cart.id,
+            status: "processing",
+            originatorId: session.customerId,
+            originatorType: 'customer',
+            reason: "Order placed successfully and payment received"
+          }
+        ]
+      });
+
+      // Update all order details in a single operation
       const updatedOrder = await tx.order.update({
         where: { id: cart.id },
         data: {
@@ -143,14 +179,14 @@ export async function POST(
           isPaid: true,
           phone,
           address: `${address}, ${city}, ${state} ${postalCode}, ${country}`,
-          customerDiscount: customerDiscount || 0,
-          couponDiscount: couponDiscount || 0,
-          emailDiscount: emailDiscount || 0,
-          totalAmount: orderTotal,
-          finalAmount: finalTotal,
           promotions: {
             connect: customerPromotions.map(p => ({ id: p.id }))
-          }
+          },
+          totalAmount: orderTotalDecimal,
+          finalAmount: finalTotal,
+          emailDiscount: new Decimal(emailDiscount || 0),
+          customerDiscount: new Decimal(customerDiscount || 0),
+          couponDiscount: new Decimal(couponDiscount || 0)
         },
         include: {
           orderItems: {
@@ -161,52 +197,19 @@ export async function POST(
                 }
               }
             }
+          },
+          statusHistory: {
+            orderBy: {
+              createdAt: 'desc'
+            }
+          },
+          stockMovements: {
+            orderBy: {
+              createdAt: 'desc'
+            }
           }
         }
       });
-
-      // Process shipment for each item
-      for (const item of cart.orderItems) {
-        const stockItem = await tx.stockItem.findUnique({
-          where: {
-            variantId_storeId: {
-              variantId: item.variantId,
-              storeId
-            }
-          }
-        });
-
-        if (!stockItem) {
-          throw new Error(`Stock item not found for variant ${item.variantId}`);
-        }
-
-        // Update stock counts
-        await tx.stockItem.update({
-          where: {
-            id: stockItem.id
-          },
-          data: {
-            count: {
-              decrement: item.quantity
-            },
-            reserved: {
-              decrement: item.quantity
-            }
-          }
-        });
-
-        // Create stock movement for shipment
-        await tx.stockMovement.create({
-          data: {
-            variantId: item.variantId,
-            stockItemId: stockItem.id,
-            quantity: item.quantity,
-            type: "shipped",
-            reason: `Order ${cart.id} - Items shipped`,
-            originatorType: "system"
-          }
-        });
-      }
 
       // Create a new cart for the customer
       await tx.order.create({
@@ -237,6 +240,8 @@ export async function GET(
   try {
     const session = await getCustomerSession();
     const storeId = params.storeId;
+    const { searchParams } = new URL(req.url);
+    const orderId = searchParams.get('orderId');
 
     if (!storeId) {
       return new NextResponse("Store ID is required", { status: 400 });
@@ -246,7 +251,36 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // Get customer's orders except cart
+    // If orderId is provided, return specific order details
+    if (orderId) {
+      const order = await prismadb.order.findFirst({
+        where: {
+          id: orderId,
+          storeId,
+          customerId: session.customerId,
+        },
+        include: {
+          orderItems: {
+            include: {
+              variant: {
+                include: {
+                  product: true,
+                  images: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!order) {
+        return new NextResponse("Order not found", { status: 404 });
+      }
+
+      return NextResponse.json([order]);
+    }
+
+    // Otherwise return all orders except cart
     const orders = await prismadb.order.findMany({
       where: {
         storeId,

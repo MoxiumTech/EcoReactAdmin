@@ -1,168 +1,6 @@
 import { NextResponse } from "next/server";
-import prismadb from "@/lib/prismadb";
 import { getAdminSession } from "@/lib/auth";
-
-// Valid stock movement types
-const STOCK_MOVEMENT_TYPES = [
-  'received',     // Stock received from supplier
-  'reserved',     // Stock reserved for order
-  'unreserved',   // Stock reservation cancelled
-  'shipped',      // Stock shipped to customer
-  'returned',     // Stock returned by customer
-  'adjustment',   // Manual stock adjustment
-  'transfer_in',  // Stock transferred in from another location
-  'transfer_out', // Stock transferred out to another location
-  'damaged',      // Stock marked as damaged/unsellable
-  'correction'    // Correction to fix inventory discrepancy
-] as const;
-
-type StockMovementType = typeof STOCK_MOVEMENT_TYPES[number];
-
-export async function POST(
-  req: Request,
-  { params }: { params: { storeId: string } }
-) {
-  try {
-    const session = await getAdminSession();
-    
-    if (!session) {
-      return new NextResponse("Unauthorized - Admin access required", { status: 403 });
-    }
-
-    const body = await req.json();
-    
-    const { 
-      type,
-      quantity,
-      stockItemId,
-      reason,
-      orderId,
-      originatorId,
-      originatorType
-    } = body;
-
-    if (!type || !STOCK_MOVEMENT_TYPES.includes(type)) {
-      return new NextResponse("Valid movement type is required", { status: 400 });
-    }
-
-    if (typeof quantity !== 'number' || quantity === 0) {
-      return new NextResponse("Quantity is required and must be a non-zero number", { status: 400 });
-    }
-
-    // Validate required fields based on movement type
-    if (['shipped', 'returned'].includes(type) && !orderId) {
-      return new NextResponse("Order ID is required for shipped/returned movements", { status: 400 });
-    }
-
-    if (!stockItemId) {
-      return new NextResponse("Stock item ID is required", { status: 400 });
-    }
-
-    if (!params.storeId) {
-      return new NextResponse("Store id is required", { status: 400 });
-    }
-
-    const storeByUserId = await prismadb.store.findFirst({
-      where: {
-        id: params.storeId,
-        userId: session.userId,
-      }
-    });
-
-    if (!storeByUserId) {
-      return new NextResponse("Unauthorized - Store access denied", { status: 403 });
-    }
-
-    const stockItem = await prismadb.stockItem.findUnique({
-      where: {
-        id: stockItemId,
-      },
-      include: {
-        variant: true
-      }
-    });
-
-    if (!stockItem) {
-      return new NextResponse("Stock item not found", { status: 404 });
-    }
-
-    // Validate available stock for outgoing movements
-    const availableStock = stockItem.count - stockItem.reserved;
-    if (['shipped', 'transfer_out', 'damaged'].includes(type) && quantity > availableStock) {
-      return new NextResponse("Insufficient available stock", { status: 400 });
-    }
-
-    // Calculate new stock and reservation counts
-    let newCount = stockItem.count;
-    let newReserved = stockItem.reserved;
-    
-    switch (type) {
-      case 'received':
-      case 'returned':
-      case 'transfer_in':
-        newCount += quantity;
-        break;
-      case 'reserved':
-        if (quantity > availableStock) {
-          return new NextResponse("Cannot reserve more than available stock", { status: 400 });
-        }
-        newReserved += quantity;
-        break;
-      case 'unreserved':
-        if (quantity > stockItem.reserved) {
-          return new NextResponse("Cannot unreserve more than reserved quantity", { status: 400 });
-        }
-        newReserved -= quantity;
-        break;
-      case 'shipped':
-        if (quantity > stockItem.reserved) {
-          return new NextResponse("Cannot ship more than reserved quantity", { status: 400 });
-        }
-        newCount -= quantity;
-        newReserved -= quantity;
-        break;
-      case 'transfer_out':
-      case 'damaged':
-        newCount -= quantity;
-        break;
-      case 'adjustment':
-      case 'correction':
-        newCount += quantity; // Can be positive or negative
-        break;
-    }
-
-    // Create stock movement and update stock counts in a transaction
-    const movementData = {
-      type,
-      quantity,
-      stockItemId,
-      variantId: stockItem.variantId,
-      reason: orderId ? `Order #${orderId} - ${reason || ''}` : reason || null,
-      ...(originatorId && { originatorId }),
-      ...(originatorType && { originatorType })
-    };
-
-    const [stockMovement] = await prismadb.$transaction([
-      prismadb.stockMovement.create({
-        data: movementData
-      }),
-      prismadb.stockItem.update({
-        where: { id: stockItemId },
-        data: {
-          count: newCount,
-          reserved: newReserved,
-          stockStatus: newCount > 0 ? (newCount > (stockItem.variant.lowStockAlert || 0) ? 'in_stock' : 'low_stock') : 'out_of_stock',
-          updatedAt: new Date()
-        }
-      })
-    ]);
-
-    return NextResponse.json(stockMovement);
-  } catch (error) {
-    console.log('[STOCK_MOVEMENTS_POST]', error);
-    return new NextResponse("Internal error", { status: 500 });
-  }
-}
+import prismadb from "@/lib/prismadb";
 
 export async function GET(
   req: Request,
@@ -170,42 +8,194 @@ export async function GET(
 ) {
   try {
     const session = await getAdminSession();
-    
     if (!session) {
-      return new NextResponse("Unauthorized - Admin access required", { status: 403 });
-    }
-
-    if (!params.storeId) {
-      return new NextResponse("Store id is required", { status: 400 });
+      return new NextResponse("Unauthorized", { status: 401 });
     }
 
     const { searchParams } = new URL(req.url);
-    const stockItemId = searchParams.get('stockItemId');
-    const type = searchParams.get('type');
+    const variantId = searchParams.get("variantId");
+    const orderId = searchParams.get("orderId");
+    const page = parseInt(searchParams.get("page") || "1");
+    const limit = parseInt(searchParams.get("limit") || "10");
+    const skip = (page - 1) * limit;
 
-    const stockMovements = await prismadb.stockMovement.findMany({
-      where: {
-        stockItem: {
+    type WhereClause = {
+      stockItem: {
+        storeId: string;
+      };
+      variantId?: string | { in: string[] };
+      reason?: { contains: string };
+    };
+
+    let whereClause: WhereClause = {
+      stockItem: {
+        storeId: params.storeId
+      }
+    };
+
+    if (variantId) {
+      whereClause.variantId = variantId;
+    }
+
+    if (orderId) {
+      // First get the order's items to know which variants to look for
+      const order = await prismadb.order.findUnique({
+        where: {
+          id: orderId,
           storeId: params.storeId
         },
-        ...(stockItemId && { stockItemId }),
-        ...(type && { type }),
-      },
-      include: {
-        stockItem: {
-          include: {
-            variant: true
-          }
+        include: {
+          orderItems: true
         }
+      });
+
+      if (!order) {
+        return new NextResponse("Order not found", { status: 404 });
+      }
+
+      whereClause = {
+        ...whereClause,
+        variantId: {
+          in: order.orderItems.map(item => item.variantId)
+        },
+        reason: {
+          contains: `Order ${orderId}`
+        }
+      };
+    }
+
+    // Get total count for pagination
+    const totalCount = await prismadb.stockMovement.count({
+      where: whereClause
+    });
+
+    const stockMovements = await prismadb.stockMovement.findMany({
+      where: whereClause,
+      include: {
+        variant: {
+          include: {
+            product: {
+              select: {
+                name: true
+              }
+            }
+          }
+        },
+        stockItem: true
       },
       orderBy: {
         createdAt: 'desc'
-      }
+      },
+      skip,
+      take: limit
     });
-  
-    return NextResponse.json(stockMovements);
+
+    return NextResponse.json({
+      items: stockMovements,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page
+    });
   } catch (error) {
     console.log('[STOCK_MOVEMENTS_GET]', error);
+    return new NextResponse("Internal error", { status: 500 });
+  }
+}
+
+export async function POST(
+  req: Request,
+  { params }: { params: { storeId: string } }
+) {
+  try {
+    const session = await getAdminSession();
+    if (!session) {
+      return new NextResponse("Unauthorized", { status: 401 });
+    }
+
+    const body = await req.json();
+    const { 
+      variantId, 
+      quantity, 
+      type, 
+      reason 
+    } = body;
+
+    if (!variantId || !quantity || !type || !reason) {
+      return new NextResponse("Missing required fields", { status: 400 });
+    }
+
+    const stockItem = await prismadb.stockItem.findUnique({
+      where: {
+        variantId_storeId: {
+          variantId,
+          storeId: params.storeId
+        }
+      }
+    });
+
+    if (!stockItem) {
+      return new NextResponse("Stock item not found", { status: 404 });
+    }
+
+    // Start transaction to ensure data consistency
+    const result = await prismadb.$transaction(async (tx) => {
+      // Create stock movement
+      const movement = await tx.stockMovement.create({
+        data: {
+          variantId,
+          stockItemId: stockItem.id,
+          quantity,
+          type,
+          reason,
+          originatorType: "admin",
+          originatorId: session.userId
+        }
+      });
+
+      // Update stock counts based on movement type
+      let updateData: any = {};
+      
+      switch (type) {
+        case "adjustment":
+        case "purchase":
+          updateData.count = {
+            increment: quantity
+          };
+          break;
+        case "sale":
+        case "loss":
+          updateData.count = {
+            decrement: quantity
+          };
+          break;
+        case "reserved":
+          updateData.reserved = {
+            increment: quantity
+          };
+          break;
+        case "unreserved":
+          updateData.reserved = {
+            decrement: quantity
+          };
+          break;
+      }
+
+      // Update stock item
+      const updatedStockItem = await tx.stockItem.update({
+        where: {
+          id: stockItem.id
+        },
+        data: updateData
+      });
+
+      return {
+        movement,
+        stockItem: updatedStockItem
+      };
+    });
+
+    return NextResponse.json(result);
+  } catch (error) {
+    console.log('[STOCK_MOVEMENTS_POST]', error);
     return new NextResponse("Internal error", { status: 500 });
   }
 }

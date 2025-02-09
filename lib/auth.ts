@@ -176,7 +176,7 @@ export async function generateCustomerTokens(customer: { id: string; email: stri
 
     const accessToken = await new SignJWT(basePayload)
       .setProtectedHeader({ alg: 'HS256' })
-      .setExpirationTime('15m')
+      .setExpirationTime('7d')
       .sign(secret);
 
     const refreshToken = await new SignJWT({ 
@@ -193,7 +193,7 @@ export async function generateCustomerTokens(customer: { id: string; email: stri
     const accessToken = jwt.sign(
       basePayload,
       process.env.JWT_SECRET!,
-      { expiresIn: '15m' }
+      { expiresIn: '7d' }
     );
 
     const refreshToken = jwt.sign(
@@ -210,7 +210,7 @@ export async function generateCustomerTokens(customer: { id: string; email: stri
 }
 
 // Verify refresh token and generate new access token
-export async function refreshCustomerToken(refreshToken: string): Promise<{ accessToken: string } | null> {
+export async function refreshCustomerToken(refreshToken: string): Promise<{ accessToken: string; domain?: string } | null> {
   try {
     let decoded;
     
@@ -243,7 +243,18 @@ export async function refreshCustomerToken(refreshToken: string): Promise<{ acce
       storeId: customer.storeId
     });
 
-    return { accessToken };
+    const store = await prismadb.store.findUnique({
+      where: { id: customer.storeId }
+    });
+
+    if (!store) {
+      return null;
+    }
+
+    return { 
+      accessToken,
+      domain: store.domain || undefined
+    };
   } catch (error) {
     console.error('[REFRESH_TOKEN_ERROR]', error);
     return null;
@@ -258,8 +269,8 @@ export function isCustomer(session: Session | null): session is CustomerSession 
   return session?.role === 'customer';
 }
 
-export function getAuthCookie(token: string, role: 'admin' | 'customer', isRefreshToken: boolean = false) {
-  return {
+export function getAuthCookie(token: string, role: 'admin' | 'customer', isRefreshToken: boolean = false, host?: string) {
+  const baseConfig = {
     name: role === 'admin' ? 'admin_token' : (isRefreshToken ? 'customer_refresh_token' : 'customer_token'),
     value: token,
     httpOnly: true,
@@ -272,8 +283,22 @@ export function getAuthCookie(token: string, role: 'admin' | 'customer', isRefre
           ? 7 * 24 * 60 * 60 * 1000  // 7 days
           : (isRefreshToken 
               ? 7 * 24 * 60 * 60 * 1000  // 7 days for refresh token
-              : 15 * 60 * 1000)  // 15 minutes for access token
+              : 7 * 24 * 60 * 60 * 1000)  // 7 days for access token
       )
     )
   };
+
+  // Only set domain for customer tokens and when host is provided
+  if (role === 'customer' && host) {
+    // Extract the domain from the host
+    // Remove port if present and get the base domain
+    const domain = host.split(':')[0].split('.').slice(-2).join('.');
+    return {
+      ...baseConfig,
+      domain: `.${domain}`, // e.g., .example.com
+    };
+  }
+
+  // For admin or when no host is provided
+  return baseConfig;
 }

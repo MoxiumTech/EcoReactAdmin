@@ -89,6 +89,8 @@ model StockMovement {
   variant        Variant   @relation(fields: [variantId], references: [id])
   stockItemId    String
   stockItem      StockItem @relation(fields: [stockItemId], references: [id])
+  orderId        String?
+  order          Order?    @relation(fields: [orderId], references: [id], onDelete: SetNull)
   quantity       Int
   type           String
   reason         String?
@@ -99,4 +101,5 @@ model StockMovement {
 
   @@index([variantId])
   @@index([stockItemId])
+  @@index([orderId])
 }

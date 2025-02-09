@@ -1,0 +1,30 @@
+import { 
+  LucideProps,
+  X,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  ChevronsLeft,
+  ChevronsRight,
+  ShoppingBag,
+  ShoppingCart,
+  Package,
+  Truck,
+  AlertCircle,
+  Bell,
+} from "lucide-react";
+
+export const Icons = {
+  x: X,
+  check: Check,
+  chevronLeft: ChevronLeft,
+  chevronRight: ChevronRight,
+  chevronsLeft: ChevronsLeft,
+  chevronsRight: ChevronsRight,
+  bag: ShoppingBag,
+  cart: ShoppingCart,
+  package: Package,
+  truck: Truck,
+  alert: AlertCircle,
+  bell: Bell,
+} as const;
