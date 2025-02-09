@@ -6,6 +6,8 @@ import { toast } from "react-hot-toast";
 import axios from "axios";
 import { Loader } from "@/components/ui/loader";
 import { StaffForm } from "./components/staff-form";
+import { PermissionGate } from "@/components/auth/permission-gate";
+import { Permissions } from "@/types/permissions";
 
 interface Role {
   id: string;
@@ -67,13 +69,18 @@ export default function StaffPage() {
   }
 
   return (
-    <div className="flex-col">
-      <StaffForm 
-        initialData={staffData}
-        roles={roles}
-        storeId={params.storeId as string}
-        staffId={params.staffId as string}
-      />
-    </div>
+    <PermissionGate 
+      permission={Permissions.VIEW_ROLES}
+      managePermission={[Permissions.MANAGE_ROLES, Permissions.MANAGE_STAFF]}
+    >
+      <div className="flex-col">
+        <StaffForm 
+          initialData={staffData}
+          roles={roles}
+          storeId={params.storeId as string}
+          staffId={params.staffId as string}
+        />
+      </div>
+    </PermissionGate>
   );
 }

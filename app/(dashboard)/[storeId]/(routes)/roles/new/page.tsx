@@ -6,6 +6,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "react-hot-toast";
+import { PermissionGate } from "@/components/auth/permission-gate";
+import { Permissions } from "@/types/permissions";
 
 import { Button } from "@/components/ui/button";
 import {
@@ -91,8 +93,12 @@ export default function NewRolePage() {
   };
 
   return (
-    <div className="flex-col">
-      <div className="flex-1 space-y-4 p-8 pt-6">
+    <PermissionGate
+      permission={Permissions.VIEW_ROLES}
+      managePermission={Permissions.MANAGE_ROLES}
+    >
+      <div className="flex-col">
+        <div className="flex-1 space-y-4 p-8 pt-6">
         <div className="flex items-center justify-between">
           <Heading
             title="Create Role"
@@ -172,7 +178,8 @@ export default function NewRolePage() {
             />
           </form>
         </Form>
+        </div>
       </div>
-    </div>
+    </PermissionGate>
   );
 }

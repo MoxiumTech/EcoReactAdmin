@@ -6,6 +6,8 @@ import { toast } from "react-hot-toast";
 import axios from "axios";
 import { Loader } from "@/components/ui/loader";
 import { RoleForm } from "./components/role-form";
+import { PermissionGate } from "@/components/auth/permission-gate";
+import { Permissions } from "@/types/permissions";
 
 interface RoleData {
   name: string;
@@ -44,12 +46,17 @@ export default function RolePage() {
   }
 
   return (
-    <div className="flex-col">
-      <RoleForm 
-        initialData={data}
-        storeId={params.storeId as string}
-        roleId={params.roleId as string}
-      />
-    </div>
+    <PermissionGate 
+      permission={Permissions.VIEW_ROLES}
+      managePermission={Permissions.MANAGE_ROLES}
+    >
+      <div className="flex-col">
+        <RoleForm 
+          initialData={data}
+          storeId={params.storeId as string}
+          roleId={params.roleId as string}
+        />
+      </div>
+    </PermissionGate>
   );
 }
