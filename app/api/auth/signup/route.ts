@@ -1,5 +1,7 @@
+export const dynamic = 'force-dynamic';
 import { NextResponse } from "next/server";
-import { createUser, generateAdminToken } from "@/lib/auth";
+import { cookies } from "next/headers";
+import { createUser, generateAdminToken, getAuthCookie } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
 import { initializeStoreRoles } from "@/lib/init-store-roles";
 
@@ -65,21 +67,33 @@ export async function POST(
       return new NextResponse("Failed to initialize store", { status: 500 });
     }
 
-    // Generate admin token
-    const token = generateAdminToken(user);
+    // Generate token using auth utility
+    const token = await generateAdminToken(user);
 
-    // Create response with cookie
-    const response = NextResponse.json({ success: true });
-    
-    response.cookies.set({
-      name: 'admin_token',
-      value: token,
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
+    // Set cookie with proper configuration for root domain only
+    const cookieStore = await cookies();
+    const cookieConfig = getAuthCookie(token, 'admin');
+
+    // For local development with lvh.me, the cookie needs to be set for .lvh.me
+    const rootDomain = process.env.MAIN_DOMAIN?.split(':')[0]; // Remove port
+    const baseRootDomain = rootDomain?.startsWith('admin.') ? rootDomain.substring(6) : rootDomain;
+
+    cookieStore.set(cookieConfig.name, cookieConfig.value, {
+      ...cookieConfig,
+      sameSite: 'lax' as const,
       path: '/',
-      expires: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) // 7 days
+      domain: `.${baseRootDomain}` // Add dot prefix to make it work for all subdomains
     });
+
+    console.log('[SIGNUP] Setting cookie:', {
+      name: cookieConfig.name,
+      domain: `.${baseRootDomain}`,
+      path: '/',
+      sameSite: 'lax'
+    });
+
+    // Create response
+    const response = NextResponse.json({ success: true });
 
     return response;
   } catch (error) {

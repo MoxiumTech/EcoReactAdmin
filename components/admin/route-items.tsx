@@ -26,6 +26,7 @@ import {
   FolderTree,
   FileQuestion,
   LayoutTemplate,
+  LifeBuoy,
 } from "lucide-react";
 
 type MenuItem = {
@@ -133,6 +134,10 @@ const routePermissions: Record<string, {
   
   // Documentation
   '/documentation': {
+    view: 'store:view'
+  },
+  // Support
+  '/support': {
     view: 'store:view'
   },
   
@@ -375,6 +380,18 @@ export function useRouteItems({ isOwner }: UseRouteItemsProps) {
           href: `/${params.storeId}/documentation`,
           active: pathname === `/${params.storeId}/documentation`,
           icon: <FileQuestion className="h-4 w-4" />
+        }
+      ]
+    },
+    {
+      label: "Support",
+      icon: LifeBuoy,
+      items: [
+        {
+          label: "Support Tickets",
+          href: `/${params.storeId}/support`,
+          active: pathname === `/${params.storeId}/support`,
+          icon: <LifeBuoy className="h-4 w-4" />
         }
       ]
     },

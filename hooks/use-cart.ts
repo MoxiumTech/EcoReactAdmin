@@ -29,7 +29,7 @@ interface CartStore {
   isInitialized: boolean;
   customerId: string | null;
   storeId: string | null;
-  addItem: (variantId: string | { id: string, [key: string]: any }) => Promise<void>;
+  addItem: (variantId: string | { id: string, [key: string]: any }, quantity?: number) => Promise<void>;
   removeItem: (itemId: string) => Promise<void>;
   updateQuantity: (itemId: string, quantity: number) => Promise<void>;
   fetchCart: () => Promise<void>;
@@ -132,7 +132,7 @@ const useCart = create<CartStore>((set, get) => ({
     }
   },
 
-  addItem: async (variantId) => {
+  addItem: async (variantId, quantity = 1) => {
     try {
       const currentState = get();
       set({ isLoading: true });
@@ -153,7 +153,7 @@ const useCart = create<CartStore>((set, get) => ({
       const response = await apiCallWithRefresh(async () => 
         axios.post(`/api/storefront/${get().storeId}/cart`, {
           variantId: variantToUse,
-          quantity: 1
+          quantity
         })
       );
 

@@ -2,7 +2,9 @@ import { Navbar } from "./components/navbar";
 import prismadb from "@/lib/prismadb";
 import { ThemeProvider } from "@/components/providers/theme-provider";
 import { Toaster } from "react-hot-toast";
+import { StorefrontChat } from "@/components/storefront/chat/storefront-chat";
 import { getStoreByDomain } from "@/actions/get-store-by-domain";
+import { getCustomerSession } from "@/lib/auth";
 
 export default async function StoreLayout({
   children,
@@ -11,12 +13,14 @@ export default async function StoreLayout({
   children: React.ReactNode;
   params: { domain: string };
 }) {
-  // Get store data
+  // Get store data and customer session
   const store = await getStoreByDomain(params.domain);
-  
   if (!store) {
     return null;
   }
+
+  const session = await getCustomerSession();
+  console.log("Customer session in layout:", session); // Debug log
 
   // Get taxonomies with their taxons for navigation
   const taxonomies = await prismadb.$queryRaw<Array<any>>`
@@ -121,6 +125,7 @@ export default async function StoreLayout({
             </p>
           </div>
         </footer>
+        <StorefrontChat storeId={store.id} customerId={session?.customerId} />
       </ThemeProvider>
     </div>
   );

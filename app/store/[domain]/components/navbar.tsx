@@ -241,8 +241,30 @@ export const Navbar: React.FC<NavbarProps> = ({
                       <Link href={`/store/${domain}/wishlist`}>Wishlist</Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />
-                    <DropdownMenuItem asChild className="text-red-500 focus:text-red-500">
-                      <Link href={`/store/${domain}/signout`}>Sign Out</Link>
+                    <DropdownMenuItem
+                      className="text-red-500 focus:text-red-500 cursor-pointer"
+                      onSelect={async (event) => {
+                        event.preventDefault();
+                        try {
+                          const response = await fetch(`/api/storefront/${domain}/auth/signout`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' }
+                          });
+
+                          if (response.ok) {
+                            // Clear local cart state if needed
+                            localStorage.removeItem(`cart_${domain}`);
+                            // Force page refresh to clear all states
+                            window.location.href = `/store/${domain}`;
+                          }
+                        } catch (error) {
+                          console.error('Error signing out:', error);
+                          // Still redirect on error
+                          window.location.href = `/store/${domain}`;
+                        }
+                      }}
+                    >
+                      Sign Out
                     </DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>

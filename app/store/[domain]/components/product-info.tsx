@@ -62,13 +62,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
     if (!variantToAdd) return;
 
     setAddingToCart(true);
-    cart.addItem({
-      id: variantToAdd.id,
-      name: variantToAdd.name || product.name,
-      price: variantToAdd.price || product.price,
-      image: variantToAdd.images?.[0]?.url || product.images?.[0]?.url || '',
-      quantity: quantity
-    });
+    await cart.addItem(variantToAdd.id, quantity);
     setTimeout(() => setAddingToCart(false), 600);
   };
 

@@ -1,5 +1,7 @@
 import { Decimal } from "@prisma/client/runtime/library";
 
+
+
 export interface Store {
   id: string;
   name: string;

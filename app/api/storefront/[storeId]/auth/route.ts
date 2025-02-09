@@ -38,26 +38,35 @@ export async function POST(
 
     // Set cookies
     const cookieStore = cookies();
+    const host = req.headers.get('host');
     
     // Set access token cookie
-    const accessCookie = getAuthCookie(accessToken, 'customer', false);
-    cookieStore.set(accessCookie.name, accessCookie.value, {
+    const accessCookie = getAuthCookie(accessToken, 'customer', false, host || undefined);
+    const accessCookieOptions: any = {
       httpOnly: accessCookie.httpOnly,
       secure: accessCookie.secure,
       sameSite: accessCookie.sameSite as 'lax',
       path: accessCookie.path,
       expires: accessCookie.expires
-    });
+    };
+    if ('domain' in accessCookie) {
+      accessCookieOptions.domain = accessCookie.domain;
+    }
+    cookieStore.set(accessCookie.name, accessCookie.value, accessCookieOptions);
 
     // Set refresh token cookie
-    const refreshCookie = getAuthCookie(refreshToken, 'customer', true);
-    cookieStore.set(refreshCookie.name, refreshCookie.value, {
+    const refreshCookie = getAuthCookie(refreshToken, 'customer', true, host || undefined);
+    const refreshCookieOptions: any = {
       httpOnly: refreshCookie.httpOnly,
       secure: refreshCookie.secure,
       sameSite: refreshCookie.sameSite as 'lax',
       path: refreshCookie.path,
       expires: refreshCookie.expires
-    });
+    };
+    if ('domain' in refreshCookie) {
+      refreshCookieOptions.domain = refreshCookie.domain;
+    }
+    cookieStore.set(refreshCookie.name, refreshCookie.value, refreshCookieOptions);
 
     console.log('[AUTH_DEBUG] Token generation successful');
 

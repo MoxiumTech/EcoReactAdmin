@@ -109,11 +109,13 @@ export default function CheckoutPage() {
   }, [domain, form, cart.isInitialized, cart.customerId]);
 
   // Initialize cart if needed
+  const { isInitialized, isLoading, fetchCart } = cart;
+  
   useEffect(() => {
-    if (!cart.isInitialized && !cart.isLoading) {
-      cart.fetchCart();
+    if (!isInitialized && !isLoading) {
+      fetchCart();
     }
-  }, [cart.isInitialized, cart.isLoading, cart.fetchCart]);
+  }, [isInitialized, isLoading, fetchCart]);
 
   const onSubmit = async (data: CheckoutFormValues) => {
     try {
@@ -125,7 +127,7 @@ export default function CheckoutPage() {
         return;
       }
 
-      await axios.post(`/api/storefront/${cart.storeId}/checkout`, {
+      const response = await axios.post(`/api/storefront/${cart.storeId}/checkout`, {
         paymentMethod: data.paymentMethod,
         phone: data.phone,
         address: data.address,
@@ -133,12 +135,19 @@ export default function CheckoutPage() {
         state: data.state,
         postalCode: data.postalCode,
         country: data.country,
+        emailDiscount,
         customerDiscount,
         couponDiscount
       });
 
+      const orderId = response.data.id;
       toast.success("Order placed successfully!");
-      router.push(`/store/${domain}/profile`);
+      
+      // Clear the cart state
+      cart.fetchCart();
+      
+      // Redirect to success page
+      router.push(`/store/${domain}/checkout/success?orderId=${orderId}`);
     } catch (error: any) {
       if (error.response?.data === "Cart is empty") {
         toast.error("Your cart is empty");

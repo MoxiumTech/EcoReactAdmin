@@ -76,6 +76,7 @@ const OrdersPage = async ({
       }, 0)
     ),
     isPaid: order.isPaid,
+    status: order.status as 'processing' | 'completed' | 'cancelled',
     createdAt: format(order.createdAt, 'MMMM do, yyyy'),
   }));
 

@@ -5,6 +5,7 @@ model User {
   password       String
   stores         Store[]          @relation("UserToStore")
   roleAssignments RoleAssignment[] @relation("UserToRoleAssignment")
+  assignedTickets SupportTicket[] @relation("UserToTicket")
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
 }
@@ -80,6 +81,7 @@ model Customer {
   storeId   String
   store     Store           @relation("StoreToCustomer", fields: [storeId], references: [id])
   orders    Order[]         @relation("CustomerToOrder")
+  tickets   SupportTicket[] @relation("CustomerToTicket")
   name      String
   email     String
   password  String

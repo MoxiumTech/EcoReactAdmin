@@ -1,3 +1,4 @@
+export const dynamic = "force-dynamic";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { 
@@ -6,6 +7,7 @@ import {
   verifyPassword, 
   getCustomerByEmail 
 } from "@/lib/auth";
+import prismadb from "@/lib/prismadb";
 
 export async function POST(
   req: Request,
@@ -19,7 +21,6 @@ export async function POST(
       return new NextResponse("Missing credentials", { status: 400 });
     }
 
-    // Get customer
     const customer = await getCustomerByEmail(email, storeId);
 
     if (!customer) {
@@ -42,26 +43,35 @@ export async function POST(
 
     // Set cookies
     const cookieStore = cookies();
+    const host = req.headers.get('host');
     
     // Set access token cookie
-    const accessConfig = getAuthCookie(accessToken, 'customer', false);
-    cookieStore.set(accessConfig.name, accessConfig.value, {
-      httpOnly: accessConfig.httpOnly,
-      secure: accessConfig.secure,
-      sameSite: accessConfig.sameSite as 'lax',
-      path: accessConfig.path,
-      expires: accessConfig.expires
-    });
+    const accessCookie = getAuthCookie(accessToken, 'customer', false, host || undefined);
+    const accessCookieOptions: any = {
+      httpOnly: accessCookie.httpOnly,
+      secure: accessCookie.secure,
+      sameSite: accessCookie.sameSite as 'lax',
+      path: accessCookie.path,
+      expires: accessCookie.expires
+    };
+    if ('domain' in accessCookie) {
+      accessCookieOptions.domain = accessCookie.domain;
+    }
+    cookieStore.set(accessCookie.name, accessCookie.value, accessCookieOptions);
 
     // Set refresh token cookie
-    const refreshConfig = getAuthCookie(refreshToken, 'customer', true);
-    cookieStore.set(refreshConfig.name, refreshConfig.value, {
-      httpOnly: refreshConfig.httpOnly,
-      secure: refreshConfig.secure,
-      sameSite: refreshConfig.sameSite as 'lax',
-      path: refreshConfig.path,
-      expires: refreshConfig.expires
-    });
+    const refreshCookie = getAuthCookie(refreshToken, 'customer', true, host || undefined);
+    const refreshCookieOptions: any = {
+      httpOnly: refreshCookie.httpOnly,
+      secure: refreshCookie.secure,
+      sameSite: refreshCookie.sameSite as 'lax',
+      path: refreshCookie.path,
+      expires: refreshCookie.expires
+    };
+    if ('domain' in refreshCookie) {
+      refreshCookieOptions.domain = refreshCookie.domain;
+    }
+    cookieStore.set(refreshCookie.name, refreshCookie.value, refreshCookieOptions);
 
     return NextResponse.json({
       customer: {
