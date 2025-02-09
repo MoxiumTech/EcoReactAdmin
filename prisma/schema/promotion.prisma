@@ -1,0 +1,43 @@
+model Promotion {
+  id          String        @id @default(uuid())
+  storeId     String
+  store       Store         @relation("StoreToPromotion", fields: [storeId], references: [id])
+  name        String
+  description String?
+  type        String        @default("coupon") // "coupon" or "email"
+  code        String?       // For coupon-based promotions
+  discount    Decimal
+  isFixed     Boolean       @default(false)    // false = percentage, true = fixed amount
+  minAmount   Decimal?      
+  maxAmount   Decimal?      // Maximum discount amount
+  startDate   DateTime?
+  endDate     DateTime?
+  isActive    Boolean       @default(true)
+  usageLimit  Int?         // Maximum number of times this promotion can be used
+  usageCount  Int          @default(0)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+
+  // Relations
+  customers   Customer[]   @relation("CustomerToPromotion")  // For email-based promotions
+  orders      Order[]     @relation("OrderToPromotion")      // Track which orders used this promotion
+  orderPromotions OrderPromotion[]
+
+  @@unique([storeId, code])
+  @@index([storeId])
+}
+
+// Add a junction table for order-promotion relationship
+model OrderPromotion {
+  id          String    @id @default(uuid())
+  orderId     String
+  order       Order     @relation(fields: [orderId], references: [id])
+  promotionId String
+  promotion   Promotion @relation(fields: [promotionId], references: [id])
+  discountAmount Decimal
+  createdAt   DateTime  @default(now())
+
+  @@unique([orderId, promotionId])
+  @@index([orderId])
+  @@index([promotionId])
+}

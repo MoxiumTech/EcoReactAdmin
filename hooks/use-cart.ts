@@ -26,6 +26,7 @@ interface Cart {
 interface CartStore {
   items: CartItem[];
   isLoading: boolean;
+  isInitialized: boolean;
   customerId: string | null;
   storeId: string | null;
   addItem: (variantId: string | { id: string, [key: string]: any }) => Promise<void>;
@@ -34,20 +35,43 @@ interface CartStore {
   fetchCart: () => Promise<void>;
 }
 
+// Utility function to handle API calls with token refresh
+const apiCallWithRefresh = async <T>(
+  apiCall: () => Promise<T>
+): Promise<T> => {
+  try {
+    return await apiCall();
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      try {
+        // Attempt to refresh the token
+        await axios.post('/api/auth/customer/refresh');
+        // Retry the original request
+        return await apiCall();
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        throw error;
+      }
+    }
+    throw error;
+  }
+};
+
 const useCart = create<CartStore>((set, get) => ({
   items: [],
   isLoading: false,
+  isInitialized: false,
   customerId: null as string | null,
   storeId: null as string | null,
 
   fetchCart: async () => {
     const currentState = get();
-    if (currentState.isLoading) return; // Prevent multiple simultaneous fetches
+    if (currentState.isLoading || currentState.isInitialized) return;
     
     try {
       set({ isLoading: true });
       
-      // Get domain from URL (/store/[domain]/...)
+      // Get domain from URL
       const pathParts = window.location.pathname.split('/');
       const domain = pathParts[2];
       
@@ -57,39 +81,48 @@ const useCart = create<CartStore>((set, get) => ({
       }
 
       // Get customer information first
-      const customer = await getCurrentCustomer(domain);
-      console.log('Customer data:', customer); // Debug log
+      const customer = await apiCallWithRefresh(async () => getCurrentCustomer(domain));
       
       if (!customer) {
-        console.log('No customer found - user needs to sign in');
-        set({ items: [], customerId: null, storeId: null });
+        set({ 
+          items: [], 
+          customerId: null, 
+          storeId: null, 
+          isInitialized: true 
+        });
         return;
       }
 
       if (!customer.storeId) {
-        console.error('Customer found but no storeId:', customer);
-        set({ items: [], customerId: customer.id, storeId: null });
+        set({ 
+          items: [], 
+          customerId: customer.id, 
+          storeId: null, 
+          isInitialized: true 
+        });
         return;
       }
-
-      console.log('Setting customer data:', { customerId: customer.id, storeId: customer.storeId });
+      
       set({ customerId: customer.id, storeId: customer.storeId });
 
-      console.log('Using storeId:', customer.storeId); // Debug log
-      const response = await axios.get(`/api/storefront/${customer.storeId}/cart`);
-      console.log('Cart response:', response.data); // Debug log
-      
-      console.log('Cart fetch response:', response.data);
+      const response = await apiCallWithRefresh(async () => 
+        axios.get(`/api/storefront/${customer.storeId}/cart`)
+      );
+
       if (response.data?.orderItems) {
-        console.log('Setting cart items:', response.data.orderItems);
         set({ 
           items: response.data.orderItems,
           storeId: response.data.storeId,
-          customerId: response.data.customerId
+          customerId: response.data.customerId,
+          isInitialized: true
         });
       } else {
-        console.log('Setting empty cart');
-        set({ items: [], storeId: customer?.storeId || null, customerId: customer?.id || null });
+        set({ 
+          items: [], 
+          storeId: customer?.storeId || null, 
+          customerId: customer?.id || null,
+          isInitialized: true
+        });
       }
     } catch (error) {
       console.error('Error fetching cart:', error);
@@ -99,39 +132,40 @@ const useCart = create<CartStore>((set, get) => ({
     }
   },
 
-  addItem: async (variantId: string | { id: string, [key: string]: any }) => {
+  addItem: async (variantId) => {
     try {
-      set({ isLoading: true });
       const currentState = get();
+      set({ isLoading: true });
+
       if (!currentState.storeId) {
-        // Try to get customer info if we don't have it
         const pathParts = window.location.pathname.split('/');
         const domain = pathParts[2];
-      const customer = await getCurrentCustomer(domain);
-      console.log('Customer data for add:', customer); // Debug log
-      
-      if (!customer) {
-        toast.error('Please sign in to add items to cart');
-        console.log('No storeId found for adding item'); // Debug log
+        const customer = await getCurrentCustomer(domain);
+        
+        if (!customer) {
+          toast.error('Please sign in to add items to cart');
           return;
         }
         set({ customerId: customer.id, storeId: customer.storeId });
       }
 
       const variantToUse = typeof variantId === 'object' ? variantId.id : variantId;
-      const response = await axios.post(`/api/storefront/${get().storeId}/cart`, {
-        variantId: variantToUse,
-        quantity: 1
-      });
-      console.log('Add item response:', response.data);
+      const response = await apiCallWithRefresh(async () => 
+        axios.post(`/api/storefront/${get().storeId}/cart`, {
+          variantId: variantToUse,
+          quantity: 1
+        })
+      );
+
       if (response.data?.orderItems) {
         set({
           items: response.data.orderItems,
           storeId: response.data.storeId,
-          customerId: response.data.customerId
+          customerId: response.data.customerId,
+          isInitialized: true
         });
       } else {
-        set({ items: [] });
+        set({ items: [], isInitialized: true });
       }
       toast.success('Item added to cart');
     } catch (error) {
@@ -141,15 +175,15 @@ const useCart = create<CartStore>((set, get) => ({
     }
   },
 
-  removeItem: async (itemId: string) => {
+  removeItem: async (itemId) => {
     try {
-      set({ isLoading: true });
       const currentState = get();
+      set({ isLoading: true });
+
       if (!currentState.storeId) {
-        // Try to get customer info if we don't have it
         const pathParts = window.location.pathname.split('/');
         const domain = pathParts[2];
-        const customer = await getCurrentCustomer(domain);
+        const customer = await apiCallWithRefresh(() => getCurrentCustomer(domain));
         
         if (!customer) {
           toast.error('Please sign in to remove items from cart');
@@ -158,16 +192,19 @@ const useCart = create<CartStore>((set, get) => ({
         set({ customerId: customer.id, storeId: customer.storeId });
       }
 
-      const response = await axios.delete(`/api/storefront/${get().storeId}/cart?itemId=${itemId}`);
-      console.log('Remove item response:', response.data);
+      const response = await apiCallWithRefresh(async () => 
+        axios.delete(`/api/storefront/${get().storeId}/cart?itemId=${itemId}`)
+      );
+
       if (response.data?.orderItems) {
         set({
           items: response.data.orderItems,
           storeId: response.data.storeId,
-          customerId: response.data.customerId
+          customerId: response.data.customerId,
+          isInitialized: true
         });
       } else {
-        set({ items: [] });
+        set({ items: [], isInitialized: true });
       }
       toast.success('Item removed from cart');
     } catch (error) {
@@ -177,17 +214,17 @@ const useCart = create<CartStore>((set, get) => ({
     }
   },
 
-  updateQuantity: async (itemId: string, quantity: number) => {
+  updateQuantity: async (itemId, quantity) => {
     if (quantity < 1) return;
     
     try {
-      set({ isLoading: true });
       const currentState = get();
+      set({ isLoading: true });
+
       if (!currentState.storeId) {
-        // Try to get customer info if we don't have it
         const pathParts = window.location.pathname.split('/');
         const domain = pathParts[2];
-        const customer = await getCurrentCustomer(domain);
+        const customer = await apiCallWithRefresh(() => getCurrentCustomer(domain));
         
         if (!customer) {
           toast.error('Please sign in to update cart');
@@ -196,19 +233,22 @@ const useCart = create<CartStore>((set, get) => ({
         set({ customerId: customer.id, storeId: customer.storeId });
       }
 
-      const response = await axios.patch(`/api/storefront/${get().storeId}/cart`, {
-        itemId,
-        quantity
-      });
-      console.log('Update quantity response:', response.data);
+      const response = await apiCallWithRefresh(async () => 
+        axios.patch(`/api/storefront/${get().storeId}/cart`, {
+          itemId,
+          quantity
+        })
+      );
+
       if (response.data?.orderItems) {
         set({
           items: response.data.orderItems,
           storeId: response.data.storeId,
-          customerId: response.data.customerId
+          customerId: response.data.customerId,
+          isInitialized: true
         });
       } else {
-        set({ items: [] });
+        set({ items: [], isInitialized: true });
       }
       toast.success('Cart updated');
     } catch (error) {

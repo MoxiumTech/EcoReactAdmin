@@ -15,20 +15,19 @@ export default function CartPage() {
   const params = useParams();
 
   useEffect(() => {
-    // Initialize cart data
-    cart.fetchCart();
-  }, [cart]);
+    // Only fetch if not initialized and not loading
+    if (!cart.isInitialized && !cart.isLoading) {
+      cart.fetchCart();
+    }
+  }, [cart.isInitialized, cart.isLoading, cart.fetchCart]);
 
   if (cart.isLoading) {
     return (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Loader 
-              simulateProgress={true}
-              status="Initializing shopping cart..."
-              onComplete={() => cart.fetchCart()}
-            />
+            <Spinner />
+            <p className="mt-4 text-sm text-gray-500">Loading cart...</p>
           </div>
         </div>
       </div>

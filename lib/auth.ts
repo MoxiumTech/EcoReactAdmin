@@ -38,15 +38,40 @@ export async function getAdminSession(): Promise<AdminSession | null> {
 
 export async function getCustomerSession(): Promise<CustomerSession | null> {
   try {
-    const cookieStore = await cookies();
-    const token = cookieStore.get('customer_token')?.value;
+    const cookieStore = cookies();
+    const token = cookieStore.get('customer_token');
+    const refreshToken = cookieStore.get('customer_refresh_token');
 
-    if (!token) {
+    if (!token?.value) {
       return null;
     }
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as Session;
-    return isCustomer(decoded) ? decoded : null;
+    try {
+      const decoded = jwt.verify(token.value, process.env.JWT_SECRET!) as Session;
+      return isCustomer(decoded) ? decoded : null;
+    } catch (error) {
+      // If token is expired and we have a refresh token, try to refresh
+      if (error instanceof jwt.TokenExpiredError && refreshToken?.value) {
+        const newTokens = await refreshCustomerToken(refreshToken.value);
+        if (newTokens) {
+          // Set new token
+          const cookieOptions = getAuthCookie(newTokens.accessToken, 'customer');
+          cookieStore.set(cookieOptions.name, cookieOptions.value, {
+            httpOnly: cookieOptions.httpOnly,
+            secure: cookieOptions.secure,
+            sameSite: cookieOptions.sameSite as 'lax',
+            path: cookieOptions.path,
+            expires: cookieOptions.expires
+          });
+          
+          // Decode and return new session
+          const newDecoded = jwt.verify(newTokens.accessToken, process.env.JWT_SECRET!) as Session;
+          return isCustomer(newDecoded) ? newDecoded : null;
+        }
+      }
+      console.error('[CUSTOMER_AUTH_ERROR]', error);
+      return null;
+    }
   } catch (error) {
     console.error('[CUSTOMER_AUTH_ERROR]', error);
     return null;
@@ -233,14 +258,22 @@ export function isCustomer(session: Session | null): session is CustomerSession 
   return session?.role === 'customer';
 }
 
-export function getAuthCookie(token: string, role: 'admin' | 'customer') {
+export function getAuthCookie(token: string, role: 'admin' | 'customer', isRefreshToken: boolean = false) {
   return {
-    name: role === 'admin' ? 'admin_token' : 'customer_token',
+    name: role === 'admin' ? 'admin_token' : (isRefreshToken ? 'customer_refresh_token' : 'customer_token'),
     value: token,
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    sameSite: 'lax' as const,
     path: '/',
-    expires: new Date(Date.now() + (role === 'admin' ? 7 : 30) * 24 * 60 * 60 * 1000)
+    expires: new Date(
+      Date.now() + (
+        role === 'admin' 
+          ? 7 * 24 * 60 * 60 * 1000  // 7 days
+          : (isRefreshToken 
+              ? 7 * 24 * 60 * 60 * 1000  // 7 days for refresh token
+              : 15 * 60 * 1000)  // 15 minutes for access token
+      )
+    )
   };
 }

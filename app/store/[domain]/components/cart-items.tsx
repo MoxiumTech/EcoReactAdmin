@@ -1,5 +1,6 @@
 "use client";
 
+import React from "react";
 import Image from "next/image";
 import { useParams } from "next/navigation";
 import { Minus, Plus, X } from "lucide-react";
@@ -22,9 +23,18 @@ const NoImagePlaceholder = () => (
 
 const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
   const params = useParams();
-  const cart = useCart();
+  const { items, isLoading, updateQuantity, removeItem } = useCart();
 
-  if (cart.isLoading) {
+  // Memoize the total calculation
+  const calculateTotal = React.useCallback(() => {
+    return items.reduce((total: number, item) => {
+      return total + (Number(item.variant.price) * item.quantity);
+    }, 0);
+  }, [items]);
+
+  const total = React.useMemo(() => calculateTotal(), [calculateTotal]);
+
+  if (isLoading) {
     return (
       <Card className="flex flex-col items-center justify-center h-[300px] p-6">
         <Loader />
@@ -33,7 +43,7 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
     );
   }
 
-  if (!cart.items.length) {
+  if (!items.length) {
     return (
       <Card className="flex flex-col items-center justify-center h-[300px] p-6">
         <div className="h-20 w-20 rounded-full bg-gray-100 flex items-center justify-center mb-4">
@@ -45,15 +55,9 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
     );
   }
 
-  const calculateTotal = () => {
-    return cart.items.reduce((total, item) => {
-      return total + (Number(item.variant.price) * item.quantity);
-    }, 0);
-  };
-
   return (
     <div className="space-y-6">
-      {cart.items.map((item) => (
+      {items.map((item) => (
         <Card key={item.id} className="p-4">
           <div className="flex space-x-4">
             <div className="relative h-24 w-24 rounded-lg overflow-hidden bg-gray-100">
@@ -79,10 +83,10 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
                   </p>
                 </div>
                 <Button
-                  onClick={() => cart.removeItem(item.id)}
+                  onClick={() => removeItem(item.id)}
                   variant="ghost"
                   className="text-red-500 p-0 hover:text-red-600"
-                  disabled={cart.isLoading}
+                  disabled={isLoading}
                 >
                   <X size={20} />
                 </Button>
@@ -90,8 +94,8 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
               <div className="flex items-center justify-between mt-4">
                 <div className="flex items-center space-x-3 sm:space-x-4">
                   <Button
-                    onClick={() => cart.updateQuantity(item.id, item.quantity - 1)}
-                    disabled={item.quantity <= 1 || cart.isLoading}
+                    onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                    disabled={item.quantity <= 1 || isLoading}
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 rounded-full"
@@ -102,11 +106,11 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
                     {item.quantity}
                   </span>
                   <Button
-                    onClick={() => cart.updateQuantity(item.id, item.quantity + 1)}
+                    onClick={() => updateQuantity(item.id, item.quantity + 1)}
                     variant="outline"
                     size="icon"
                     className="h-8 w-8 rounded-full"
-                    disabled={cart.isLoading}
+                    disabled={isLoading}
                   >
                     <Plus size={14} />
                   </Button>
@@ -123,7 +127,7 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
         <Card className="p-6 mt-6 space-y-4">
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Subtotal</span>
-            <Currency value={calculateTotal()} />
+            <Currency value={total} />
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-gray-600">Shipping</span>
@@ -133,7 +137,7 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
             <div className="flex items-center justify-between">
               <span className="text-base font-medium">Total</span>
               <Currency
-                value={calculateTotal()}
+                value={total}
                 className="text-lg font-semibold"
               />
             </div>
@@ -142,7 +146,7 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
             className="w-full" 
             size="lg" 
             onClick={() => window.location.href = `/store/${params.domain}/checkout`}
-            disabled={cart.isLoading || cart.items.length === 0}
+            disabled={isLoading || items.length === 0}
           >
             Proceed to Checkout
           </Button>

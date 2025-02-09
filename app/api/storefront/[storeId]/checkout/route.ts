@@ -16,7 +16,10 @@ export async function POST(
       city,
       state,
       postalCode,
-      country 
+      country,
+      emailDiscount,
+      customerDiscount,
+      couponDiscount
     } = await req.json();
 
     if (!storeId) {
@@ -106,7 +109,33 @@ export async function POST(
         });
       }
 
-      // Update order status and payment details
+      // Get active customer promotions
+      const customerPromotions = await tx.promotion.findMany({
+        where: {
+          customers: {
+            some: {
+              id: session.customerId
+            }
+          },
+          storeId,
+          isActive: true,
+          startDate: {
+            lte: new Date()
+          },
+          endDate: {
+            gte: new Date()
+          }
+        }
+      });
+
+      // Calculate all discounts
+      const emailDiscountAmount = (emailDiscount / 100) * orderTotal;
+      const customerDiscountAmount = (customerDiscount / 100) * orderTotal;
+      const couponDiscountAmount = (couponDiscount / 100) * orderTotal;
+      const totalDiscounts = emailDiscountAmount + customerDiscountAmount + couponDiscountAmount;
+      const finalTotal = orderTotal - totalDiscounts;
+
+      // Update order status, payment details, and discounts
       const updatedOrder = await tx.order.update({
         where: { id: cart.id },
         data: {
@@ -114,6 +143,14 @@ export async function POST(
           isPaid: true,
           phone,
           address: `${address}, ${city}, ${state} ${postalCode}, ${country}`,
+          customerDiscount: customerDiscount || 0,
+          couponDiscount: couponDiscount || 0,
+          emailDiscount: emailDiscount || 0,
+          totalAmount: orderTotal,
+          finalAmount: finalTotal,
+          promotions: {
+            connect: customerPromotions.map(p => ({ id: p.id }))
+          }
         },
         include: {
           orderItems: {
