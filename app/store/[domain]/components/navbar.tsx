@@ -91,7 +91,8 @@ export const Navbar: React.FC<NavbarProps> = ({
     
     const checkAuth = async () => {
       try {
-        const response = await fetch(`/api/auth/customer/profile?domain=${domain}`, {
+        const origin = window.location.origin;
+        const response = await fetch(`${origin}/api/auth/customer/profile?domain=${domain}`, {
           credentials: 'include',
           headers: {
             'Cache-Control': 'no-cache',
@@ -246,7 +247,8 @@ export const Navbar: React.FC<NavbarProps> = ({
                       onSelect={async (event) => {
                         event.preventDefault();
                         try {
-                          const response = await fetch(`/api/storefront/${domain}/auth/signout`, {
+                          const origin = window.location.origin;
+                          const response = await fetch(`${origin}/api/storefront/${domain}/auth/signout`, {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' }
                           });

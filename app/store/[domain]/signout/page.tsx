@@ -11,8 +11,9 @@ export default function SignOutPage() {
   useEffect(() => {
     const signOut = async () => {
       try {
+        const origin = window.location.origin;
         // Call our new storefront signout endpoint
-        const response = await fetch(`/api/storefront/${domain}/auth/signout`, {
+        const response = await fetch(`${origin}/api/storefront/${domain}/auth/signout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json'

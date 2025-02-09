@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import prismadb from "@/lib/prismadb";
 import { formatProduct, formatProducts } from "@/lib/price-formatter";
 import { type Product } from "@/types/models";
+import { getBaseUrl } from "@/lib/server-utils";
 import { ProductsCarousel } from "../../components/products-carousel";
 import { ProductDisplay } from "../../components/product-display";
 
@@ -13,7 +14,7 @@ interface ProductPageProps {
 }
 
 const ProductPage = async ({ params }: ProductPageProps) => {
-  // Get store and validate
+  // Get store
   const store = await prismadb.store.findFirst({
     where: {
       domain: params.domain,
@@ -24,113 +25,23 @@ const ProductPage = async ({ params }: ProductPageProps) => {
     return notFound();
   }
 
-  // Get the product with its variants and related data
-  const rawProduct = await prismadb.product.findFirst({
-    where: {
-      slug: params.slug,
-      storeId: store.id,
-      isVisible: true,
-    },
-    include: {
-      images: true,
-      variants: {
-        where: { isVisible: true },
-        include: {
-          images: true,
-          size: true,
-          color: true,
-          stockItems: true,
-          optionValues: {
-            include: {
-              optionValue: {
-                include: {
-                  optionType: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          position: 'asc',
-        },
-      },
-      brand: true,
-      optionTypes: {
-        include: {
-          optionValues: true,
-        },
-      },
-      taxons: {
-        include: {
-          taxonomy: true,
-        },
-      },
-    },
-  });
-
-  if (!rawProduct) {
-    return notFound();
+  // Get product details
+  const baseUrl = getBaseUrl();
+  const productRes = await fetch(`${baseUrl}/api/storefront/${store.id}/products/${params.slug}`);
+  if (!productRes.ok) {
+    if (productRes.status === 404) {
+      return notFound();
+    }
+    throw new Error('Failed to fetch product');
   }
+  const product = await productRes.json();
 
-  // Format all prices and data types
-  const product = formatProduct(rawProduct);
-
-  // Get related products from the same categories
-  const rawRelatedProducts = await prismadb.product.findMany({
-    where: {
-      storeId: store.id,
-      isVisible: true,
-      taxons: {
-        some: {
-          id: {
-            in: product.taxons.map((t) => t.id),
-          },
-        },
-      },
-      NOT: {
-        id: product.id,
-      },
-    },
-    include: {
-      images: true,
-      variants: {
-        where: { isVisible: true },
-        include: {
-          images: true,
-          size: true,
-          color: true,
-          stockItems: true,
-          optionValues: {
-            include: {
-              optionValue: {
-                include: {
-                  optionType: true,
-                },
-              },
-            },
-          },
-        },
-        orderBy: {
-          position: 'asc',
-        },
-      },
-      brand: true,
-      optionTypes: {
-        include: {
-          optionValues: true,
-        },
-      },
-      taxons: {
-        include: {
-          taxonomy: true,
-        },
-      },
-    },
-    take: 4,
-  });
-
-  // Format related products
-  const relatedProducts = formatProducts(rawRelatedProducts);
+  // Get related products
+  const relatedRes = await fetch(`${baseUrl}/api/storefront/${store.id}/products/${params.slug}/related`);
+  if (!relatedRes.ok) {
+    throw new Error('Failed to fetch related products');
+  }
+  const relatedProducts = await relatedRes.json();
 
   return (
     <div className="bg-white">
