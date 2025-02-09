@@ -29,29 +29,37 @@ export async function POST(
       return new NextResponse("Invalid credentials", { status: 401 });
     }
 
-    // Generate tokens
-    const { accessToken } = await generateCustomerTokens({
+    // Generate both access and refresh tokens
+    const { accessToken, refreshToken } = await generateCustomerTokens({
       id: customer.id,
       email: customer.email,
       storeId: storeId
     });
 
-    console.log('[AUTH_DEBUG] Generated token payload:', {
-      customerId: customer.id,
-      email: customer.email,
-      storeId: storeId
+    // Set cookies
+    const cookieStore = cookies();
+    
+    // Set access token cookie
+    const accessCookie = getAuthCookie(accessToken, 'customer', false);
+    cookieStore.set(accessCookie.name, accessCookie.value, {
+      httpOnly: accessCookie.httpOnly,
+      secure: accessCookie.secure,
+      sameSite: accessCookie.sameSite as 'lax',
+      path: accessCookie.path,
+      expires: accessCookie.expires
     });
 
-    // Set cookie
-    const cookieStore = cookies();
-    const cookieConfig = getAuthCookie(accessToken, 'customer');
-    cookieStore.set(cookieConfig.name, cookieConfig.value, {
-      httpOnly: cookieConfig.httpOnly,
-      secure: cookieConfig.secure,
-      sameSite: cookieConfig.sameSite as 'lax',
-      path: cookieConfig.path,
-      expires: cookieConfig.expires
+    // Set refresh token cookie
+    const refreshCookie = getAuthCookie(refreshToken, 'customer', true);
+    cookieStore.set(refreshCookie.name, refreshCookie.value, {
+      httpOnly: refreshCookie.httpOnly,
+      secure: refreshCookie.secure,
+      sameSite: refreshCookie.sameSite as 'lax',
+      path: refreshCookie.path,
+      expires: refreshCookie.expires
     });
+
+    console.log('[AUTH_DEBUG] Token generation successful');
 
     return NextResponse.json({
       customer: {

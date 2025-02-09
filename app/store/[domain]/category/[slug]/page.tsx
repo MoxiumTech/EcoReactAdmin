@@ -15,6 +15,9 @@ interface CategoryPageProps {
     sizeId: string;
     brandId: string;
     sort: string;
+    minPrice?: string;
+    maxPrice?: string;
+    inStock?: string;
   };
 }
 
@@ -88,13 +91,34 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
     whereClause.brandId = searchParams.brandId;
   }
 
-  if (searchParams.colorId || searchParams.sizeId) {
-    whereClause.variants = {
+  // Build variant filters
+  const variantFilters: any = {
+    isVisible: true,
+    ...(searchParams.colorId && { colorId: searchParams.colorId }),
+    ...(searchParams.sizeId && { sizeId: searchParams.sizeId }),
+  };
+
+  // Add stock filter if requested
+  if (searchParams.inStock === 'true') {
+    variantFilters.stockItems = {
       some: {
-        isVisible: true,
-        ...(searchParams.colorId && { colorId: searchParams.colorId }),
-        ...(searchParams.sizeId && { sizeId: searchParams.sizeId }),
-      },
+        count: { gt: 0 }
+      }
+    };
+  }
+
+  // Add price range filter if provided
+  if (searchParams.minPrice || searchParams.maxPrice) {
+    variantFilters.AND = [
+      ...(searchParams.minPrice ? [{ price: { gte: parseFloat(searchParams.minPrice) } }] : []),
+      ...(searchParams.maxPrice ? [{ price: { lte: parseFloat(searchParams.maxPrice) } }] : [])
+    ];
+  }
+
+  // Apply variant filters if any exist
+  if (Object.keys(variantFilters).length > 0) {
+    whereClause.variants = {
+      some: variantFilters
     };
   }
 
@@ -139,6 +163,7 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
     orderBy: {
       ...(searchParams.sort === "price-asc" && { price: "asc" }),
       ...(searchParams.sort === "price-desc" && { price: "desc" }),
+      ...(searchParams.sort === "popularity" && { orderCount: "desc" }),
       ...((!searchParams.sort || searchParams.sort === "newest") && {
         createdAt: "desc",
       }),

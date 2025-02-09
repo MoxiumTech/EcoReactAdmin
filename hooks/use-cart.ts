@@ -35,6 +35,28 @@ interface CartStore {
   fetchCart: () => Promise<void>;
 }
 
+// Utility function to handle API calls with token refresh
+const apiCallWithRefresh = async <T>(
+  apiCall: () => Promise<T>
+): Promise<T> => {
+  try {
+    return await apiCall();
+  } catch (error: any) {
+    if (error.response?.status === 401) {
+      try {
+        // Attempt to refresh the token
+        await axios.post('/api/auth/customer/refresh');
+        // Retry the original request
+        return await apiCall();
+      } catch (refreshError) {
+        console.error('Token refresh failed:', refreshError);
+        throw error;
+      }
+    }
+    throw error;
+  }
+};
+
 const useCart = create<CartStore>((set, get) => ({
   items: [],
   isLoading: false,
@@ -44,14 +66,12 @@ const useCart = create<CartStore>((set, get) => ({
 
   fetchCart: async () => {
     const currentState = get();
-    if (currentState.isLoading || currentState.isInitialized) return; // Prevent multiple fetches
+    if (currentState.isLoading || currentState.isInitialized) return;
     
     try {
-      // Batch state updates
-      const updates = { isLoading: true };
-      set(updates);
+      set({ isLoading: true });
       
-      // Get domain from URL (/store/[domain]/...)
+      // Get domain from URL
       const pathParts = window.location.pathname.split('/');
       const domain = pathParts[2];
       
@@ -61,7 +81,8 @@ const useCart = create<CartStore>((set, get) => ({
       }
 
       // Get customer information first
-      const customer = await getCurrentCustomer(domain);
+      const customer = await apiCallWithRefresh(async () => getCurrentCustomer(domain));
+      
       if (!customer) {
         set({ 
           items: [], 
@@ -84,7 +105,10 @@ const useCart = create<CartStore>((set, get) => ({
       
       set({ customerId: customer.id, storeId: customer.storeId });
 
-      const response = await axios.get(`/api/storefront/${customer.storeId}/cart`);
+      const response = await apiCallWithRefresh(async () => 
+        axios.get(`/api/storefront/${customer.storeId}/cart`)
+      );
+
       if (response.data?.orderItems) {
         set({ 
           items: response.data.orderItems,
@@ -108,12 +132,10 @@ const useCart = create<CartStore>((set, get) => ({
     }
   },
 
-  addItem: async (variantId: string | { id: string, [key: string]: any }) => {
+  addItem: async (variantId) => {
     try {
       const currentState = get();
-      // Batch state updates
-      const updates = { isLoading: true };
-      set(updates);
+      set({ isLoading: true });
 
       if (!currentState.storeId) {
         const pathParts = window.location.pathname.split('/');
@@ -124,15 +146,17 @@ const useCart = create<CartStore>((set, get) => ({
           toast.error('Please sign in to add items to cart');
           return;
         }
-        set({ ...updates, customerId: customer.id, storeId: customer.storeId });
+        set({ customerId: customer.id, storeId: customer.storeId });
       }
 
       const variantToUse = typeof variantId === 'object' ? variantId.id : variantId;
-      const response = await axios.post(`/api/storefront/${get().storeId}/cart`, {
-        variantId: variantToUse,
-        quantity: 1
-      });
-      console.log('Add item response:', response.data);
+      const response = await apiCallWithRefresh(async () => 
+        axios.post(`/api/storefront/${get().storeId}/cart`, {
+          variantId: variantToUse,
+          quantity: 1
+        })
+      );
+
       if (response.data?.orderItems) {
         set({
           items: response.data.orderItems,
@@ -151,27 +175,27 @@ const useCart = create<CartStore>((set, get) => ({
     }
   },
 
-  removeItem: async (itemId: string) => {
+  removeItem: async (itemId) => {
     try {
       const currentState = get();
-      // Batch state updates
-      const updates = { isLoading: true };
-      set(updates);
+      set({ isLoading: true });
 
       if (!currentState.storeId) {
         const pathParts = window.location.pathname.split('/');
         const domain = pathParts[2];
-        const customer = await getCurrentCustomer(domain);
+        const customer = await apiCallWithRefresh(() => getCurrentCustomer(domain));
         
         if (!customer) {
           toast.error('Please sign in to remove items from cart');
           return;
         }
-        set({ ...updates, customerId: customer.id, storeId: customer.storeId });
+        set({ customerId: customer.id, storeId: customer.storeId });
       }
 
-      const response = await axios.delete(`/api/storefront/${get().storeId}/cart?itemId=${itemId}`);
-      console.log('Remove item response:', response.data);
+      const response = await apiCallWithRefresh(async () => 
+        axios.delete(`/api/storefront/${get().storeId}/cart?itemId=${itemId}`)
+      );
+
       if (response.data?.orderItems) {
         set({
           items: response.data.orderItems,
@@ -190,32 +214,32 @@ const useCart = create<CartStore>((set, get) => ({
     }
   },
 
-  updateQuantity: async (itemId: string, quantity: number) => {
+  updateQuantity: async (itemId, quantity) => {
     if (quantity < 1) return;
     
     try {
       const currentState = get();
-      // Batch state updates
-      const updates = { isLoading: true };
-      set(updates);
+      set({ isLoading: true });
 
       if (!currentState.storeId) {
         const pathParts = window.location.pathname.split('/');
         const domain = pathParts[2];
-        const customer = await getCurrentCustomer(domain);
+        const customer = await apiCallWithRefresh(() => getCurrentCustomer(domain));
         
         if (!customer) {
           toast.error('Please sign in to update cart');
           return;
         }
-        set({ ...updates, customerId: customer.id, storeId: customer.storeId });
+        set({ customerId: customer.id, storeId: customer.storeId });
       }
 
-      const response = await axios.patch(`/api/storefront/${get().storeId}/cart`, {
-        itemId,
-        quantity
-      });
-      console.log('Update quantity response:', response.data);
+      const response = await apiCallWithRefresh(async () => 
+        axios.patch(`/api/storefront/${get().storeId}/cart`, {
+          itemId,
+          quantity
+        })
+      );
+
       if (response.data?.orderItems) {
         set({
           items: response.data.orderItems,
