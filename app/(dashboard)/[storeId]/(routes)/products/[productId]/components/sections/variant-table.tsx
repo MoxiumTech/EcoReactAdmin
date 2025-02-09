@@ -79,7 +79,10 @@ export const VariantTable: React.FC<VariantTableProps> = ({
             Product Variants
           </h3>
         </div>
-        <Loader />
+        <Loader 
+        simulateProgress={true}
+        status="Loading your Variants..."
+        />
       </div>
     );
   }

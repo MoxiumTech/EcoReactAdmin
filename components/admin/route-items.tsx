@@ -52,58 +52,172 @@ interface UseRouteItemsProps {
   };
 }
 
-// Map routes to required permissions
-const routePermissions: Record<string, string> = {
+// Map routes to required permissions with read/write distinction
+const routePermissions: Record<string, {
+  view: string;
+  manage?: string;
+}> = {
   // Catalog
-  '/taxonomies': Permissions.VIEW_TAXONOMIES,
-  '/taxons': Permissions.VIEW_TAXONS,
-  '/products': Permissions.VIEW_PRODUCTS,
-  '/variants': Permissions.VIEW_VARIANTS,
-  '/brands': Permissions.VIEW_BRANDS,
-  '/suppliers': Permissions.VIEW_SUPPLIERS,
+  '/taxonomies': {
+    view: 'taxonomies:view',
+    manage: 'taxonomies:manage'
+  },
+  '/taxons': {
+    view: 'taxons:view',
+    manage: 'taxons:manage'
+  },
+  '/products': {
+    view: 'products:view',
+    manage: 'products:create'
+  },
+  '/variants': {
+    view: 'variants:view',
+    manage: 'variants:create'
+  },
+  '/brands': {
+    view: 'brands:view',
+    manage: 'brands:manage'
+  },
+  '/suppliers': {
+    view: 'suppliers:view',
+    manage: 'suppliers:manage'
+  },
   
   // Attributes & Properties
-  '/attributes': Permissions.VIEW_ATTRIBUTES,
-  '/attribute-values': Permissions.VIEW_ATTRIBUTES,
-  '/option-types': Permissions.VIEW_OPTION_TYPES,
+  '/attributes': {
+    view: 'attributes:view',
+    manage: 'attributes:manage'
+  },
+  '/attribute-values': {
+    view: 'attributes:view',
+    manage: 'attributes:manage'
+  },
+  '/option-types': {
+    view: 'option-types:view',
+    manage: 'option-types:manage'
+  },
   
   // Inventory
-  '/stock-items': Permissions.VIEW_STOCK,
-  '/stock-movements': Permissions.VIEW_STOCK_MOVEMENTS,
+  '/stock-items': {
+    view: 'stock:view',
+    manage: 'stock:manage'
+  },
+  '/stock-movements': {
+    view: 'stock-movements:view',
+    manage: 'stock-movements:manage'
+  },
   
   // Sales
-  '/orders': Permissions.VIEW_ORDERS,
-  '/customers': Permissions.VIEW_CUSTOMERS,
+  '/orders': {
+    view: 'orders:view',
+    manage: 'orders:manage'
+  },
+  '/customers': {
+    view: 'customers:view',
+    manage: 'customers:manage'
+  },
   
   // Content
-  '/layouts': Permissions.VIEW_LAYOUTS,
-  '/billboards': Permissions.VIEW_BILLBOARDS,
-  '/reviews': Permissions.VIEW_REVIEWS,
+  '/layouts': {
+    view: 'layouts:view',
+    manage: 'layouts:manage'
+  },
+  '/billboards': {
+    view: 'billboards:view',
+    manage: 'billboards:manage'
+  },
+  '/reviews': {
+    view: 'reviews:view',
+    manage: 'reviews:manage'
+  },
   
   // Documentation
-  '/documentation': Permissions.VIEW_STORE,
+  '/documentation': {
+    view: 'store:view'
+  },
   
   // Settings
-  '/settings': Permissions.VIEW_SETTINGS,
-  '/staff': Permissions.MANAGE_ROLES,
-  '/roles': Permissions.MANAGE_ROLES,
-  
-  // Analytics (for future use)
-  '/analytics': Permissions.VIEW_ANALYTICS
+  '/settings': {
+    view: 'settings:view',
+    manage: 'settings:manage'
+  },
+  '/staff': {
+    view: 'staff:view',
+    manage: 'staff:manage'
+  },
+  '/roles': {
+    view: 'roles:view',
+    manage: 'roles:manage'
+  }
 };
 
 // Helper function to check if a user has access to a route based on permissions
-function hasRouteAccess(route: string, isOwner: boolean, hasPermission: (permission: string) => boolean): boolean {
+function hasRouteAccess(
+  route: string, 
+  isOwner: boolean, 
+  hasPermission: (permission: string) => boolean,
+  requireManage: boolean = false
+): boolean {
   if (isOwner) return true;
 
-  // Find matching route permission
-  for (const [routePath, permission] of Object.entries(routePermissions)) {
+  // Find matching route permissions
+  for (const [routePath, permissions] of Object.entries(routePermissions)) {
     if (route.includes(routePath)) {
-      return hasPermission(permission);
+      // Get base permission name (e.g., 'products' from '/products')
+      const basePermission = routePath.replace('/', '');
+      
+      if (requireManage) {
+        // Check for specific action permissions first
+        const hasCreate = hasPermission(`${basePermission}:create`);
+        const hasEdit = hasPermission(`${basePermission}:edit`);
+        const hasDelete = hasPermission(`${basePermission}:delete`);
+        const hasManage = hasPermission(`${basePermission}:manage`);
+        
+        // For management actions, need either specific permissions or manage permission
+        const hasActionPermissions = hasCreate || hasEdit || hasDelete || hasManage;
+        
+        console.log(`Route ${route} manage check:`, { 
+          hasCreate, hasEdit, hasDelete, hasManage,
+          hasActionPermissions
+        });
+        
+        return hasPermission(permissions.view) && hasActionPermissions;
+      }
+      
+      // For viewing, check both view permission and any management permissions
+      const hasView = hasPermission(permissions.view);
+      const hasAnyManagement = hasPermission(`${basePermission}:manage`) || 
+                              hasPermission(`${basePermission}:create`) ||
+                              hasPermission(`${basePermission}:edit`) ||
+                              hasPermission(`${basePermission}:delete`);
+      
+      console.log(`Route ${route} view check:`, { 
+        hasView, 
+        hasAnyManagement,
+        basePermission
+      });
+      
+      return hasView || hasAnyManagement;
     }
   }
 
+  // If no specific permissions are found and user is not owner
+  console.log(`No permissions found for route: ${route}`);
   return false;
+}
+
+// Helper to determine if route requires management permissions
+function isManagementRoute(pathname: string): boolean {
+  const managementPatterns = [
+    '/create',
+    '/edit',
+    '/delete',
+    '/manage',
+    '/new',
+    '/update'
+  ];
+  
+  return managementPatterns.some(pattern => pathname.includes(pattern));
 }
 
 export function useRouteItems({ isOwner }: UseRouteItemsProps) {
@@ -281,41 +395,81 @@ export function useRouteItems({ isOwner }: UseRouteItemsProps) {
   ]);
 
   // Get permission check function from RBAC hook
-  const { hasPermission } = useRBAC(params.storeId);
+  const { hasPermission, isLoading, error } = useRBAC(params.storeId);
 
   // Filter routes based on permissions
   const filteredRoutes = routes.reduce<RouteItem[]>((acc, route) => {
-    // Always allow overview for everyone
-    if (route.href?.endsWith(`/${params.storeId}`)) {
-      acc.push(route);
-      return acc;
-    }
-
-    // If it's a single route
-    if (route.href) {
-      if (hasRouteAccess(route.href, isOwner, hasPermission)) {
+    try {
+      // Always allow overview for everyone
+      if (route.href?.endsWith(`/${params.storeId}`)) {
         acc.push(route);
+        return acc;
       }
+
+      // Skip route processing if RBAC is still loading or has error
+      if (isLoading || error) {
+        console.log('RBAC state:', { isLoading, error }); // Debug log
+        return acc;
+      }
+
+      // Debug logging for user status
+      console.log('Processing route access:', {
+        route: route.label,
+        isOwner,
+        href: route.href
+      });
+
+      // If it's a single route
+      if (route.href) {
+        const requiresManage = isManagementRoute(pathname);
+        if (hasRouteAccess(route.href, isOwner, hasPermission, requiresManage)) {
+          acc.push(route);
+        }
+        return acc;
+      }
+      
+      // If it has subitems, filter those
+      if (route.items) {
+        const accessibleItems = route.items.filter(item => {
+          const requiresManage = isManagementRoute(item.href);
+          const hasAccess = hasRouteAccess(item.href, isOwner, hasPermission, requiresManage);
+          console.log(`Subitem ${item.label} access:`, { hasAccess, requiresManage }); // Debug log
+          return hasAccess;
+        });
+        
+        // Only include the category if it has accessible items
+        if (accessibleItems.length > 0) {
+          acc.push({
+            ...route,
+            items: accessibleItems
+          });
+        }
+      }
+      
+      return acc;
+    } catch (err) {
+      console.error('Error processing route permissions:', err);
       return acc;
     }
-    
-    // If it has subitems, filter those
-    if (route.items) {
-      const accessibleItems = route.items.filter(item => 
-        hasRouteAccess(item.href, isOwner, hasPermission)
-      );
-      
-      // Only include the category if it has accessible items
-      if (accessibleItems.length > 0) {
-        acc.push({
-          ...route,
-          items: accessibleItems
-        });
-      }
-    }
-    
-    return acc;
   }, []);
+
+  // Debug log final routes
+  console.log('Final filtered routes:', filteredRoutes.map(r => ({
+    label: r.label,
+    items: r.items?.length || 0
+  })));
+
+  // If RBAC is loading, return only the overview route
+  if (isLoading) {
+    console.log('RBAC is loading, showing only overview'); // Debug log
+    return routes.filter(route => route.href?.endsWith(`/${params.storeId}`));
+  }
+
+  // If there's an RBAC error, return only the overview route
+  if (error) {
+    console.error('RBAC Error:', error);
+    return routes.filter(route => route.href?.endsWith(`/${params.storeId}`));
+  }
 
   return filteredRoutes;
 }

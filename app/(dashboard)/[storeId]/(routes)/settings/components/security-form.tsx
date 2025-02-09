@@ -20,6 +20,7 @@ import {
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader } from "@/components/ui/loader";
 
 interface SecurityFormProps {
   currentEmail: string;
@@ -186,7 +187,7 @@ export const SecurityForm: React.FC<SecurityFormProps> = ({ currentEmail }) => {
                 <Button disabled={loading} type="submit">
                   {loading ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader status="Loading your content..." />
                       Updating Email...
                     </>
                   ) : (
@@ -312,7 +313,7 @@ export const SecurityForm: React.FC<SecurityFormProps> = ({ currentEmail }) => {
                 <Button disabled={loading} type="submit">
                   {loading ? (
                     <div className="flex items-center">
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader status="Loading your content..."/>
                       <span>Updating Password...</span>
                     </div>
                   ) : (

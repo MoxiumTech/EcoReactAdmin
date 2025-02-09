@@ -24,7 +24,11 @@ export default function CartPage() {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="flex items-center justify-center min-h-[400px]">
           <div className="text-center">
-            <Loader variant="dots" />
+            <Loader 
+              simulateProgress={true}
+              status="Initializing shopping cart..."
+              onComplete={() => cart.fetchCart()}
+            />
           </div>
         </div>
       </div>

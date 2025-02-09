@@ -27,6 +27,11 @@ export const useRBAC = (storeId: string): UserPermissions => {
   const [error, setError] = useState<Error | null>(null);
 
   const hasPermission = useCallback((permission: string): boolean => {
+    console.log('Checking permission:', permission, 'Has permissions:', permissions); // Debug log
+    if (!permissions || permissions.length === 0) {
+      console.warn('No permissions loaded yet');
+      return false;
+    }
     return permissions.includes(permission);
   }, [permissions]);
 
@@ -35,17 +40,27 @@ export const useRBAC = (storeId: string): UserPermissions => {
       // Check cache first
       const cached = permissionsCache[storeId];
       if (cached && Date.now() - cached.timestamp < CACHE_DURATION) {
+        console.log('Using cached permissions:', cached.permissions); // Debug log
         setPermissions(cached.permissions);
         setIsLoading(false);
         return;
       }
 
       try {
+        console.log('Fetching permissions for store:', storeId); // Debug log
         const response = await fetch(`/api/${storeId}/auth/permissions`);
         if (!response.ok) {
           throw new Error('Failed to fetch permissions');
         }
         const data = await response.json();
+        
+        // Ensure data.permissions exists and is an array
+        if (!data.permissions || !Array.isArray(data.permissions)) {
+          console.error('Invalid permissions data:', data);
+          throw new Error('Invalid permissions format received');
+        }
+
+        console.log('Fetched permissions:', data.permissions); // Debug log
         
         // Update cache
         permissionsCache[storeId] = {
@@ -55,14 +70,23 @@ export const useRBAC = (storeId: string): UserPermissions => {
         
         setPermissions(data.permissions);
       } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error'));
         console.error("Failed to load permissions:", err);
+        setError(err instanceof Error ? err : new Error('Unknown error'));
+        // Clear permissions on error to prevent access with stale permissions
+        setPermissions([]);
       } finally {
         setIsLoading(false);
       }
     };
 
-    fetchPermissions();
+    if (storeId) {
+      console.log('Initializing permission fetch for store:', storeId); // Debug log
+      fetchPermissions();
+    } else {
+      console.warn('No storeId provided to useRBAC'); // Debug log
+      setPermissions([]);
+      setIsLoading(false);
+    }
   }, [storeId]);
 
   return {

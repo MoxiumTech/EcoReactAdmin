@@ -55,35 +55,53 @@ export async function GET(
         permissions.add(permission);
       });
     } else {
-      // Get user's role assignments with minimal data
-      const roleAssignments = await prismadb.roleAssignment.findMany({
+      // Get user's roles and permissions through role assignments
+      const userRoleAssignments = await prismadb.roleAssignment.findMany({
         where: {
           userId: session.userId,
-          storeId: params.storeId,
+          storeId: params.storeId
         },
-        select: {
+        include: {
           role: {
-            select: {
-              permissions: {
-                select: {
-                  name: true
-                }
-              }
+            include: {
+              permissions: true
             }
           }
         }
       });
 
-      // Add permissions from role assignments
-      roleAssignments.forEach(assignment => {
-        assignment.role.permissions.forEach(permission => {
-          permissions.add(permission.name);
-        });
+      console.log('User role assignments found:', userRoleAssignments); // Debug log
+
+      if (userRoleAssignments.length === 0) {
+        console.log('No role assignments found for user:', session.userId, 'in store:', params.storeId);
+      }
+
+      // Add permissions from each role assignment
+      userRoleAssignments.forEach(assignment => {
+        if (assignment.role.permissions) {
+          console.log(`Processing permissions for role ${assignment.role.name}:`, assignment.role.permissions);
+          assignment.role.permissions.forEach(permission => {
+            if (permission.name) {
+              // Convert permission name to format used in database (lowercase with colon)
+              const permName = permission.name.toLowerCase().replace('_', ':');
+              console.log('Adding permission:', permName);
+              permissions.add(permName);
+            }
+          });
+        }
       });
+
+      // Add default permissions that every staff member should have
+      permissions.add('store:view');
+
+      console.log('All permissions after processing:', Array.from(permissions));
     }
 
+    const permissionsArray = Array.from(permissions);
+    console.log('Final permissions:', permissionsArray); // Debug log
+
     return NextResponse.json({ 
-      permissions: Array.from(permissions),
+      permissions: permissionsArray,
       isStoreOwner 
     });
   } catch (error) {

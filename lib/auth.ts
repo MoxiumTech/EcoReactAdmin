@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import { SignJWT, jwtVerify } from "jose";
 import bcrypt from "bcryptjs";
 import prismadb from "./prismadb";
 
@@ -115,25 +116,113 @@ export async function verifyPassword(password: string, hashedPassword: string): 
   return bcrypt.compare(password, hashedPassword);
 }
 
-export function generateAdminToken(user: { id: string; email: string }) {
-  return jwt.sign(
-    { userId: user.id, email: user.email, role: 'admin' },
-    process.env.JWT_SECRET!,
-    { expiresIn: '7d' }
-  );
+export async function generateAdminToken(user: { id: string; email: string }) {
+  // For server-side (Node.js) token generation
+  if (process.env.RUNTIME_ENV === 'edge') {
+    // Edge runtime - use jose
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    return new SignJWT({ userId: user.id, email: user.email, role: 'admin' })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime('7d')
+      .sign(secret);
+  } else {
+    // Node.js runtime - use jsonwebtoken
+    return jwt.sign(
+      { userId: user.id, email: user.email, role: 'admin' },
+      process.env.JWT_SECRET!,
+      { expiresIn: '7d' }
+    );
+  }
 }
 
-export function generateCustomerToken(customer: { id: string; email: string; storeId: string }) {
-  return jwt.sign(
-    { 
+// Customer token generation with refresh token support
+export async function generateCustomerTokens(customer: { id: string; email: string; storeId: string }) {
+  const basePayload = { 
+    customerId: customer.id, 
+    email: customer.email, 
+    storeId: customer.storeId,
+    role: 'customer'
+  };
+
+  if (process.env.RUNTIME_ENV === 'edge') {
+    // Edge runtime - use jose
+    const secret = new TextEncoder().encode(process.env.JWT_SECRET);
+    const refreshSecret = new TextEncoder().encode(process.env.REFRESH_SECRET!);
+
+    const accessToken = await new SignJWT(basePayload)
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime('15m')
+      .sign(secret);
+
+    const refreshToken = await new SignJWT({ 
       customerId: customer.id, 
-      email: customer.email, 
-      storeId: customer.storeId,
-      role: 'customer'
-    },
-    process.env.JWT_SECRET!,
-    { expiresIn: '30d' }
-  );
+      storeId: customer.storeId 
+    })
+      .setProtectedHeader({ alg: 'HS256' })
+      .setExpirationTime('7d')
+      .sign(refreshSecret);
+
+    return { accessToken, refreshToken };
+  } else {
+    // Node.js runtime - use jsonwebtoken
+    const accessToken = jwt.sign(
+      basePayload,
+      process.env.JWT_SECRET!,
+      { expiresIn: '15m' }
+    );
+
+    const refreshToken = jwt.sign(
+      { 
+        customerId: customer.id, 
+        storeId: customer.storeId 
+      },
+      process.env.REFRESH_SECRET!,
+      { expiresIn: '7d' }
+    );
+
+    return { accessToken, refreshToken };
+  }
+}
+
+// Verify refresh token and generate new access token
+export async function refreshCustomerToken(refreshToken: string): Promise<{ accessToken: string } | null> {
+  try {
+    let decoded;
+    
+    if (process.env.RUNTIME_ENV === 'edge') {
+      const secret = new TextEncoder().encode(process.env.REFRESH_SECRET);
+      const { payload } = await jwtVerify(refreshToken, secret);
+      decoded = payload;
+    } else {
+      decoded = jwt.verify(refreshToken, process.env.REFRESH_SECRET!) as jwt.JwtPayload;
+    }
+
+    const { customerId, storeId } = decoded;
+
+    // Get customer details for new token
+    const customer = await prismadb.customer.findFirst({
+      where: { 
+        id: customerId,
+        storeId: storeId
+      }
+    });
+
+    if (!customer) {
+      return null;
+    }
+
+    // Generate new access token
+    const { accessToken } = await generateCustomerTokens({
+      id: customer.id,
+      email: customer.email,
+      storeId: customer.storeId
+    });
+
+    return { accessToken };
+  } catch (error) {
+    console.error('[REFRESH_TOKEN_ERROR]', error);
+    return null;
+  }
 }
 
 export function isAdmin(session: Session | null): session is AdminSession {
