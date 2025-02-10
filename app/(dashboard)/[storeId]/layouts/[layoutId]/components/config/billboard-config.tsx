@@ -3,10 +3,10 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { UseFormReturn } from "react-hook-form";
 import ImageUpload from "@/components/ui/image-upload";
 import { useState } from "react";
-import { toast } from "react-hot-toast";
 
 interface BillboardConfigProps {
   form: UseFormReturn<any>;
@@ -34,40 +34,59 @@ export const BillboardConfig = ({
   const currentImageUrl = form.watch("config.imageUrl") || "";
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <div className="space-y-4">
-          <FormField
-            control={form.control}
-            name="config.label"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Label</FormLabel>
-                <FormControl>
-                  <Input placeholder="New Collection" {...field} />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+    <div className="space-y-6">
+      {/* Billboard Content Section */}
+      <Card className="p-6">
+        <div className="font-medium mb-4">Billboard Content</div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
+            <FormField
+              control={form.control}
+              name="config.label"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Label</FormLabel>
+                  <FormControl>
+                    <Input placeholder="New Collection" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
-          <div>
+            <FormField
+              control={form.control}
+              name="config.title"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Title</FormLabel>
+                  <FormControl>
+                    <Input placeholder="Spring 2025" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          <div className="space-y-2">
             <FormLabel>Background Image</FormLabel>
-            <div className="mt-2">
-              <ImageUpload 
-                value={currentImageUrl ? [currentImageUrl] : []}
-                disabled={uploading}
-                onChange={handleImageChange}
-                onRemove={handleImageRemove}
-              />
-            </div>
+            <ImageUpload 
+              value={currentImageUrl ? [currentImageUrl] : []}
+              disabled={uploading}
+              onChange={handleImageChange}
+              onRemove={handleImageRemove}
+            />
           </div>
         </div>
       </Card>
 
-      <Card className="p-4">
-        <h3 className="text-sm font-medium mb-4">Call to Action</h3>
-        <div className="space-y-4">
+      <Separator />
+
+      {/* Call to Action Section */}
+      <Card className="p-6">
+        <div className="font-medium mb-4">Call to Action</div>
+        <div className="grid grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="config.callToAction.text"

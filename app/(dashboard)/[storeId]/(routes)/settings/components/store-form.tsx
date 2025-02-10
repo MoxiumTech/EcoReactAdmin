@@ -1,7 +1,7 @@
 'use client';
 
 import * as z from "zod";
-import { Trash, ExternalLink } from "lucide-react";
+import { Trash, ExternalLink, Globe, PaintBucket, Image as ImageIcon, Shield, DollarSign } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
@@ -12,13 +12,15 @@ import { useParams, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Heading } from "@/components/ui/heading";
 import { Separator } from "@/components/ui/separator";
+import { Card } from "@/components/ui/card";
 import {
   Form,
   FormControl,
   FormField,
   FormItem,
   FormLabel,
-  FormMessage
+  FormMessage,
+  FormDescription
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { AlertModal } from "@/components/modals/alert-modal";
@@ -27,6 +29,7 @@ import { useOrigin } from "@/hooks/use-origin";
 import ImageUpload from "@/components/ui/image-upload";
 import { Textarea } from "@/components/ui/textarea";
 import { ExtendedStore } from "../types";
+import { Badge } from "@/components/ui/badge";
 
 interface SettingsFormProps {
   initialData: ExtendedStore;
@@ -38,7 +41,17 @@ const formSchema = z.object({
   customCss: z.string().optional(),
   logoUrl: z.string().optional(),
   faviconUrl: z.string().optional(),
+  currency: z.string().min(1).default('USD'),
 });
+
+const currencies = [
+  { label: 'US Dollar (USD)', value: 'USD' },
+  { label: 'Euro (EUR)', value: 'EUR' },
+  { label: 'British Pound (GBP)', value: 'GBP' },
+  { label: 'Japanese Yen (JPY)', value: 'JPY' },
+  { label: 'Canadian Dollar (CAD)', value: 'CAD' },
+  { label: 'Australian Dollar (AUD)', value: 'AUD' },
+];
 
 type SettingsFormValues = z.infer<typeof formSchema>;
 
@@ -62,6 +75,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       customCss: initialData.customCss || '',
       logoUrl: initialData.logoUrl || '',
       faviconUrl: initialData.faviconUrl || '',
+      currency: initialData.currency || 'USD',
     }
   });
 
@@ -70,7 +84,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       setLoading(true);
       await axios.patch(`/api/stores/${params.storeId}`, data);
       router.refresh();
-      toast.success('Store updated.');
+      toast.success('Store updated successfully.');
     } catch (error) {
       toast.error('Something went wrong.');
     } finally {
@@ -97,7 +111,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       setLoading(true);
       await axios.delete(`/api/stores/${params.storeId}`);
       router.push('/');
-      toast.success('Store deleted.');
+      toast.success('Store deleted successfully.');
     } catch (error) {
       toast.error('Make sure you removed all products and categories first.');
     } finally {
@@ -130,8 +144,8 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       />
       <div className="flex items-center justify-between">
         <Heading
-          title="Store settings"
-          description="Manage store preferences"
+          title="Store Settings"
+          description="Manage your store configuration"
         />
         <div className="flex items-center gap-x-2">
           {storeDomain && (
@@ -139,11 +153,21 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
               variant="outline"
               size="sm"
               onClick={() => window.open(storeDomain, '_blank')}
+              className="flex items-center gap-x-2"
             >
-              <ExternalLink className="h-4 w-4 mr-2" />
+              <ExternalLink className="h-4 w-4" />
               Visit Store
             </Button>
           )}
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => router.push(`/${params.storeId}/settings/security`)}
+            className="flex items-center gap-x-2"
+          >
+            <Shield className="h-4 w-4" />
+            Security Settings
+          </Button>
           <Button
             disabled={loading || testDataLoading}
             variant="secondary"
@@ -162,116 +186,181 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           </Button>
         </div>
       </div>
-      <Separator />
+      <Separator className="my-4" />
       <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 w-full">
-          <div className="grid grid-cols-3 gap-8">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Name</FormLabel>
-                  <FormControl>
-                    <Input disabled={loading} placeholder="Store name" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="domain"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Domain</FormLabel>
-                  <FormControl>
-                    <Input
-                      disabled={loading}
-                      placeholder={process.env.NODE_ENV === 'development'
-                        ? "e.g., store1"
-                        : "e.g., store1.yourdomain.com"}
-                      {...field}
-                      value={field.value || ''}
-                    />
-                  </FormControl>
-                  <p className="text-sm text-muted-foreground">
-                    {process.env.NODE_ENV === 'development'
-                      ? "Enter only the store name (e.g., 'store1' for store1.lvh.me:3000)"
-                      : "Enter your full domain (e.g., 'store1.yourdomain.com')"}
-                  </p>
-                  {storeDomain && (
-                    <p className="text-sm text-muted-foreground mt-2">
-                      Store URL: {storeDomain}
-                    </p>
-                  )}
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <div className="grid grid-cols-2 gap-8">
-            <FormField
-              control={form.control}
-              name="logoUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Store Logo</FormLabel>
-                  <FormControl>
-                    <ImageUpload 
-                      value={field.value ? [field.value] : []} 
-                      disabled={loading} 
-                      onChange={(url) => field.onChange(url)}
-                      onRemove={() => field.onChange('')}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
-              name="faviconUrl"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Store Favicon</FormLabel>
-                  <FormControl>
-                    <ImageUpload 
-                      value={field.value ? [field.value] : []} 
-                      disabled={loading} 
-                      onChange={(url) => field.onChange(url)}
-                      onRemove={() => field.onChange('')}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-          <FormField
-            control={form.control}
-            name="customCss"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Custom CSS</FormLabel>
-                <FormControl>
-                  <Textarea 
-                    disabled={loading}
-                    placeholder="Add custom CSS for your store..."
-                    {...field}
-                    value={field.value || ''}
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+          <div className="grid grid-cols-1 gap-8">
+            <Card className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <Globe className="h-4 w-4 text-primary" />
+                </div>
+                <h2 className="text-lg font-medium">General Settings</h2>
+              </div>
+              <div className="grid gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="name"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Store Name</FormLabel>
+                        <FormControl>
+                          <Input disabled={loading} placeholder="My Awesome Store" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button disabled={loading} className="ml-auto" type="submit">
-            Save changes
-          </Button>
+                  <FormField
+                    control={form.control}
+                    name="currency"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Store Currency</FormLabel>
+                        <select
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          disabled={loading}
+                          {...field}
+                        >
+                          {currencies.map((currency) => (
+                            <option key={currency.value} value={currency.value}>
+                              {currency.label}
+                            </option>
+                          ))}
+                        </select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={form.control}
+                  name="domain"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Store Domain</FormLabel>
+                      <FormControl>
+                        <Input
+                          disabled={loading}
+                          placeholder={process.env.NODE_ENV === 'development'
+                            ? "e.g., store1"
+                            : "e.g., store1.yourdomain.com"}
+                          {...field}
+                          value={field.value || ''}
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        {process.env.NODE_ENV === 'development'
+                          ? "Enter only the store name (e.g., 'store1' for store1.lvh.me:3000)"
+                          : "Enter your full domain (e.g., 'store1.yourdomain.com')"}
+                      </FormDescription>
+                      {storeDomain && (
+                        <Badge variant="secondary" className="mt-2">
+                          {storeDomain}
+                        </Badge>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <ImageIcon className="h-4 w-4 text-primary" />
+                </div>
+                <h2 className="text-lg font-medium">Store Branding</h2>
+              </div>
+              <div className="grid gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <FormField
+                    control={form.control}
+                    name="logoUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Store Logo</FormLabel>
+                        <FormControl>
+                          <ImageUpload 
+                            value={field.value ? [field.value] : []} 
+                            disabled={loading} 
+                            onChange={(url) => field.onChange(url)}
+                            onRemove={() => field.onChange('')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="faviconUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Store Favicon</FormLabel>
+                        <FormControl>
+                          <ImageUpload 
+                            value={field.value ? [field.value] : []} 
+                            disabled={loading} 
+                            onChange={(url) => field.onChange(url)}
+                            onRemove={() => field.onChange('')}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+              </div>
+            </Card>
+
+            <Card className="p-6 space-y-4">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-primary/10 rounded-lg">
+                  <PaintBucket className="h-4 w-4 text-primary" />
+                </div>
+                <h2 className="text-lg font-medium">Store Customization</h2>
+              </div>
+              <FormField
+                control={form.control}
+                name="customCss"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Custom CSS</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        disabled={loading}
+                        placeholder="Add custom CSS for your store..."
+                        {...field}
+                        value={field.value || ''}
+                        className="min-h-[150px] font-mono"
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Add custom CSS to customize your store's appearance
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </Card>
+          </div>
+
+          <div className="flex justify-end gap-x-2">
+            <Button
+              disabled={loading}
+              type="submit"
+              className="ml-auto"
+              size="lg"
+            >
+              Save Changes
+            </Button>
+          </div>
         </form>
       </Form>
-      <Separator />
+      <Separator className="my-4" />
       <ApiAlert 
         title="NEXT_PUBLIC_API_URL" 
         variant="public" 

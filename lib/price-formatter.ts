@@ -3,11 +3,11 @@ export const formatPrice = (price: number | string): number => {
   return Number(numericPrice.toFixed(2));
 };
 
-export const formatPriceWithCurrency = (price: number | string): string => {
+export const formatPriceWithCurrency = (price: number | string, currency: string = 'USD'): string => {
   const formattedPrice = formatPrice(price);
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
-    currency: 'USD',
+    currency: currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   }).format(formattedPrice);

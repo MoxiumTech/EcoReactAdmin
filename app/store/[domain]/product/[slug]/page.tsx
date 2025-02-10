@@ -5,6 +5,7 @@ import { type Product } from "@/types/models";
 import { getBaseUrl } from "@/lib/server-utils";
 import { ProductsCarousel } from "../../components/products-carousel";
 import { ProductDisplay } from "../../components/product-display";
+import { Breadcrumb } from "../../components/breadcrumb";
 
 interface ProductPageProps {
   params: {
@@ -43,14 +44,46 @@ const ProductPage = async ({ params }: ProductPageProps) => {
   }
   const relatedProducts = await relatedRes.json();
 
+  // Create breadcrumb items from product categories
+  const breadcrumbItems = product.categories?.[0] ? [
+    ...(product.categories[0].ancestors || []).map((ancestor: any) => ({
+      label: ancestor.name,
+      href: `/category/${ancestor.slug}`
+    })),
+    {
+      label: product.categories[0].name,
+      href: `/category/${product.categories[0].slug}`
+    },
+    {
+      label: product.name,
+      href: `/product/${product.slug}`
+    }
+  ] : [
+    {
+      label: product.name,
+      href: `/product/${product.slug}`
+    }
+  ];
+
   return (
-    <div className="bg-white">
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
       <div className="mx-auto max-w-screen-2xl px-4 py-10 sm:px-6 lg:px-8">
-        <div className="md:grid md:grid-cols-2 md:items-start md:gap-x-8">
-          <ProductDisplay product={product} />
+        <Breadcrumb items={breadcrumbItems} />
+        
+        <div className="mt-6 lg:mt-8 bg-white rounded-xl shadow-sm border">
+          <div className="md:grid md:grid-cols-2 md:items-start">
+            <ProductDisplay product={product} />
+          </div>
         </div>
-        <hr className="my-10" />
-        <ProductsCarousel title="Related Items" items={relatedProducts} />
+
+        {relatedProducts.length > 0 && (
+          <div className="mt-16 pt-8 border-t">
+            <ProductsCarousel 
+              title="You May Also Like" 
+              items={relatedProducts}
+            />
+          </div>
+        )}
       </div>
     </div>
   );

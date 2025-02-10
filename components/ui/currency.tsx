@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { formatPriceWithCurrency } from "@/lib/price-formatter";
+import { useStoreSettings } from "@/hooks/use-store-settings";
 
 interface CurrencyProps {
   value?: number | string;
@@ -14,6 +15,7 @@ const Currency: React.FC<CurrencyProps> = ({
   className
 }) => {
   const [isMounted, setIsMounted] = useState(false);
+  const { currency } = useStoreSettings();
 
   useEffect(() => {
     setIsMounted(true);
@@ -25,7 +27,7 @@ const Currency: React.FC<CurrencyProps> = ({
 
   return ( 
     <div className={cn("font-semibold", className)}>
-      {formatPriceWithCurrency(value)}
+      {formatPriceWithCurrency(value, currency)}
     </div>
   );
 };

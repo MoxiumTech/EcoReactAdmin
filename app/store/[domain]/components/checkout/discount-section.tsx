@@ -4,6 +4,9 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Check, Gift, Loader2, Tag, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 import axios from "axios";
 import { toast } from "react-hot-toast";
 
@@ -36,8 +39,8 @@ export const DiscountSection = ({
   const [emailDiscount, setEmailDiscount] = useState(0);
   const [customerDiscount, setCustomerDiscount] = useState(0);
   const [couponDiscount, setCouponDiscount] = useState(0);
+  const [submitting, setSubmitting] = useState(false);
 
-  // Fetch existing promotions on mount
   useEffect(() => {
     const fetchPromotions = async () => {
       try {
@@ -47,7 +50,6 @@ export const DiscountSection = ({
         setEmailDiscount(response.data.discounts.email);
         setCustomerDiscount(response.data.discounts.customer);
         
-        // Apply initial discounts
         onDiscountApplied(response.data.discounts.email, response.data.discounts.customer, 0);
       } catch (error) {
         console.error('Error fetching promotions:', error);
@@ -65,7 +67,7 @@ export const DiscountSection = ({
     if (!couponCode) return;
 
     try {
-      setLoading(true);
+      setSubmitting(true);
       const response = await axios.post(`/api/storefront/${storeId}/apply-coupon`, {
         code: couponCode
       });
@@ -74,14 +76,13 @@ export const DiscountSection = ({
       setCouponDiscount(newCouponDiscount);
       setAppliedCoupon(couponCode);
       
-      // Update all discounts
       onDiscountApplied(emailDiscount, customerDiscount, newCouponDiscount);
-      toast.success("Discount applied successfully!");
+      toast.success("Discount code applied successfully!");
     } catch (error: any) {
-      toast.error(error.response?.data || "Error applying coupon");
+      toast.error(error.response?.data || "Invalid discount code");
       setCouponCode("");
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -89,68 +90,100 @@ export const DiscountSection = ({
     setAppliedCoupon(null);
     setCouponCode("");
     setCouponDiscount(0);
-    // Update discounts without coupon
     onDiscountApplied(emailDiscount, customerDiscount, 0);
   };
 
-  const renderDiscountDisplay = () => {
-    const discounts = [];
-    if (emailDiscount > 0) {
-      discounts.push(`Email (${emailDiscount}%)`);
-    }
-    if (customerDiscount > 0) {
-      discounts.push(`Customer (${customerDiscount}%)`);
-    }
-    if (couponDiscount > 0) {
-      discounts.push(`Coupon (${couponDiscount}%)`);
-    }
-
-    if (discounts.length === 0) {
-      return null;
-    }
+  const renderDiscountBadge = (type: string, value: number) => {
+    if (value <= 0) return null;
 
     return (
-      <div className="mb-4 p-3 bg-green-50 rounded-md">
-        <p className="text-sm text-green-600 font-medium">Applied Discounts:</p>
-        <p className="text-sm text-green-700">{discounts.join(', ')}</p>
-      </div>
+      <Badge variant="secondary" className="flex items-center gap-1.5 py-1.5">
+        <Check className="h-3.5 w-3.5" />
+        <span>{type} (-{value}%)</span>
+      </Badge>
     );
   };
 
   return (
-    <Card className="p-6 mb-4">
-      <h2 className="text-xl font-semibold mb-4">Discounts</h2>
-      {renderDiscountDisplay()}
-      <div className="space-y-4">
-        {appliedCoupon ? (
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="font-medium">Applied Coupon:</p>
-              <p className="text-sm text-green-600">{appliedCoupon}</p>
-            </div>
-            <Button
-              variant="destructive"
-              size="sm"
-              onClick={removeCoupon}
-              disabled={disabled || loading}
-            >
-              Remove
-            </Button>
+    <Card className="bg-white/50 backdrop-blur-sm border shadow-sm overflow-hidden">
+      <div className="p-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="h-8 w-8 rounded-full bg-primary/10 flex items-center justify-center">
+            <Gift className="h-4 w-4 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-lg font-semibold">Apply Discounts</h2>
+            <p className="text-sm text-muted-foreground">Enter a discount code or apply available offers</p>
+          </div>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center py-4">
+            <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="flex gap-2">
-            <Input
-              placeholder="Enter coupon code"
-              value={couponCode}
-              onChange={(e) => setCouponCode(e.target.value)}
-              disabled={disabled || loading}
-            />
-            <Button
-              onClick={applyCoupon}
-              disabled={disabled || loading || !couponCode}
-            >
-              Apply
-            </Button>
+          <div className="space-y-6">
+            {/* Active Discounts */}
+            {(emailDiscount > 0 || customerDiscount > 0 || couponDiscount > 0) && (
+              <div className="flex flex-wrap gap-2">
+                {renderDiscountBadge("Email Signup", emailDiscount)}
+                {renderDiscountBadge("Member", customerDiscount)}
+                {renderDiscountBadge("Coupon", couponDiscount)}
+              </div>
+            )}
+            
+            {/* Coupon Input */}
+            <div>
+              {appliedCoupon ? (
+                <div className="bg-primary/5 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Tag className="h-4 w-4 text-primary" />
+                      <div>
+                        <p className="font-medium">{appliedCoupon}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {couponDiscount}% discount applied
+                        </p>
+                      </div>
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={removeCoupon}
+                      disabled={disabled || submitting}
+                      className="text-muted-foreground hover:text-red-600 transition-colors"
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              ) : (
+                <div className="flex gap-2">
+                  <Input
+                    placeholder="Enter discount code"
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                    disabled={disabled || submitting}
+                    className={cn(
+                      "bg-white font-medium placeholder:font-normal",
+                      "transition-all duration-200",
+                      submitting && "opacity-50"
+                    )}
+                  />
+                  <Button
+                    onClick={applyCoupon}
+                    disabled={disabled || submitting || !couponCode}
+                    className="min-w-[100px]"
+                  >
+                    {submitting ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      "Apply"
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
           </div>
         )}
       </div>

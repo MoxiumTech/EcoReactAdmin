@@ -9,10 +9,14 @@ import axios from "axios";
 import { toast } from "react-hot-toast";
 import useCart from "@/hooks/use-cart";
 import { Button } from "@/components/ui/button";
+import { Card } from "@/components/ui/card";
+import { ArrowLeft, ShieldCheck, Loader2 } from "lucide-react";
+import Link from "next/link";
 
 import { OrderSummary } from "../components/checkout/order-summary";
 import { ShippingForm } from "../components/checkout/shipping-form";
 import { DiscountSection } from "../components/checkout/discount-section";
+import { Breadcrumb } from "../components/breadcrumb";
 
 interface CustomerInfo {
   name: string;
@@ -48,6 +52,7 @@ export default function CheckoutPage() {
   const [emailDiscount, setEmailDiscount] = useState(0);
   const [customerDiscount, setCustomerDiscount] = useState(0);
   const [couponDiscount, setCouponDiscount] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<CheckoutFormValues>({
     resolver: zodResolver(formSchema),
@@ -66,7 +71,6 @@ export default function CheckoutPage() {
   useEffect(() => {
     const loadData = async () => {
       try {
-        // Only load profile data if cart is initialized and authenticated
         if (!cart.isInitialized || !cart.customerId) {
           return;
         }
@@ -119,9 +123,8 @@ export default function CheckoutPage() {
 
   const onSubmit = async (data: CheckoutFormValues) => {
     try {
-      setLoading(true);
+      setIsSubmitting(true);
       
-      // Process checkout - get storeId from cart state which comes from cookie
       if (!cart.storeId) {
         toast.error("Invalid store ID");
         return;
@@ -143,10 +146,7 @@ export default function CheckoutPage() {
       const orderId = response.data.id;
       toast.success("Order placed successfully!");
       
-      // Clear the cart state
       cart.fetchCart();
-      
-      // Redirect to success page
       router.push(`/store/${domain}/checkout/success?orderId=${orderId}`);
     } catch (error: any) {
       if (error.response?.data === "Cart is empty") {
@@ -159,25 +159,40 @@ export default function CheckoutPage() {
         toast.error("Error processing checkout");
       }
     } finally {
-      setLoading(false);
+      setIsSubmitting(false);
     }
   };
 
   if (loading || cart.isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <p className="mt-4 text-sm text-muted-foreground">Loading checkout...</p>
+          </div>
+        </div>
       </div>
     );
   }
 
   if (!cart?.items || cart.items.length === 0) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[60vh]">
-        <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
-        <Button onClick={() => router.push(`/store/${domain}`)}>
-          Continue Shopping
-        </Button>
+      <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="flex flex-col items-center justify-center min-h-[60vh]">
+            <Card className="p-8 text-center max-w-md w-full">
+              <h2 className="text-2xl font-bold mb-4">Your cart is empty</h2>
+              <p className="text-muted-foreground mb-6">Add some items to your cart to proceed with checkout</p>
+              <Button asChild size="lg" className="w-full">
+                <Link href={`/store/${domain}`} className="flex items-center justify-center gap-2">
+                  <ArrowLeft size={18} />
+                  Continue Shopping
+                </Link>
+              </Button>
+            </Card>
+          </div>
+        </div>
       </div>
     );
   }
@@ -186,50 +201,80 @@ export default function CheckoutPage() {
     return total + (Number(item.variant.price) * item.quantity);
   }, 0);
 
-  // Calculate discounts
   const emailDiscountAmount = (emailDiscount / 100) * subtotal;
   const customerDiscountAmount = (customerDiscount / 100) * subtotal;
   const couponDiscountAmount = (couponDiscount / 100) * subtotal;
   const totalDiscounts = emailDiscountAmount + customerDiscountAmount + couponDiscountAmount;
   const finalTotal = subtotal - totalDiscounts;
 
-  // Handler for discount updates
   const handleDiscountApplied = (newEmailDiscount: number, newCustomerDiscount: number, newCouponDiscount: number) => {
     setEmailDiscount(newEmailDiscount);
     setCustomerDiscount(newCustomerDiscount);
     setCouponDiscount(newCouponDiscount);
   };
 
+  const breadcrumbItems = [
+    {
+      label: "Cart",
+      href: `/store/${domain}/cart`
+    },
+    {
+      label: "Checkout",
+      href: `/store/${domain}/checkout`
+    }
+  ];
+
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <h1 className="text-3xl font-bold mb-8">Checkout</h1>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <OrderSummary 
-            items={cart.items}
-            subtotal={subtotal}
-            emailDiscount={emailDiscountAmount}
-            customerDiscount={customerDiscountAmount}
-            couponDiscount={couponDiscountAmount}
-            finalTotal={finalTotal}
-          />
-
-          {cart.storeId && (
-            <DiscountSection
-              storeId={cart.storeId}
-              onDiscountApplied={handleDiscountApplied}
-              disabled={loading}
-            />
-          )}
+    <div className="min-h-screen bg-gradient-to-b from-gray-50 to-white">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <Breadcrumb items={breadcrumbItems} />
+        
+        <div className="mt-6 mb-8">
+          <h1 className="text-3xl font-bold">Checkout</h1>
+          <p className="mt-2 text-muted-foreground">Complete your purchase securely</p>
         </div>
+        
+        <div className="lg:grid lg:grid-cols-12 lg:gap-x-12">
+          {/* Left column - Order summary and discounts */}
+          <div className="lg:col-span-7">
+            <div className="space-y-6">
+              <OrderSummary 
+                items={cart.items}
+                subtotal={subtotal}
+                emailDiscount={emailDiscountAmount}
+                customerDiscount={customerDiscountAmount}
+                couponDiscount={couponDiscountAmount}
+                finalTotal={finalTotal}
+              />
 
-        <ShippingForm
-          form={form}
-          loading={loading}
-          customerInfo={customerInfo}
-          onSubmit={onSubmit}
-        />
+              {cart.storeId && (
+                <DiscountSection
+                  storeId={cart.storeId}
+                  onDiscountApplied={handleDiscountApplied}
+                  disabled={loading || isSubmitting}
+                />
+              )}
+
+              <Card className="p-4 flex items-start gap-3 bg-primary/5 border-primary/10">
+                <ShieldCheck className="h-5 w-5 text-primary flex-shrink-0 mt-0.5" />
+                <div className="text-sm">
+                  <p className="font-medium text-primary">Secure Checkout</p>
+                  <p className="text-muted-foreground">Your payment information is processed securely through our payment provider.</p>
+                </div>
+              </Card>
+            </div>
+          </div>
+
+          {/* Right column - Shipping form */}
+          <div className="lg:col-span-5 mt-8 lg:mt-0">
+            <ShippingForm
+              form={form}
+              loading={loading || isSubmitting}
+              customerInfo={customerInfo}
+              onSubmit={onSubmit}
+            />
+          </div>
+        </div>
       </div>
     </div>
   );

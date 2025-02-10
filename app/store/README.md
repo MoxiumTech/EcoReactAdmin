@@ -650,16 +650,73 @@ app/store/[domain]/
 ```
 app/api/
 ├── storefront/
-│   ├── [storeId]/
-│   │   ├── store/
-│   │   │   └── details/     # Store details API
-│   │   ├── products/        # Products API
-│   │   ├── orders/          # Orders API
-│   │   └── profile/         # Profile API
-│   └── [domain]/
-│       └── auth/            # Auth API routes
-└── upload/                  # Media upload API
+│   └── [storeId]/
+│       ├── store/
+│       │   ├── details/     # Store details API
+│       │   └── layout/      # Store layout API
+│       ├── products/
+│       │   ├── [slug]/        # Product details
+│       │   └── related/       # Related products
+│       ├── taxonomies/
+│       │   └── [slug]/
+│       │       ├── route.ts   # Category details
+│       │       └── products/  # Category products
+│       ├── orders/
+│       │   ├── route.ts      # Orders list
+│       │   └── [orderId]/    # Order details
+│       ├── cart/             # Cart operations
+│       ├── profile/          # Customer profile
+│       └── auth/             # Authentication
+│           ├── signin/       # Sign in
+│           └── signout/      # Sign out
+└── upload/                   # Media upload API
+
+Note: This reflects only the actively used API routes in the current implementation.
+Other routes like support/, apply-coupon/, etc. have been removed as they
+are not part of the core functionality.
 ```
+
+Active API Endpoints:
+
+1. **Store Management**
+   ```
+   GET /api/storefront/[storeId]/store/details   # Store information
+   GET /api/storefront/[storeId]/store/layout    # Store layout config
+   ```
+
+2. **Product & Category**
+   ```
+   GET /api/storefront/[storeId]/products/[slug]         # Product details
+   GET /api/storefront/[storeId]/products/[slug]/related # Related products
+   GET /api/storefront/[storeId]/taxonomies/[slug]       # Category details
+   GET /api/storefront/[storeId]/taxonomies/[slug]/products # Category products
+   ```
+
+3. **Order Management**
+   ```
+   GET /api/storefront/[storeId]/orders          # List orders
+   GET /api/storefront/[storeId]/orders/[orderId] # Order details
+   ```
+
+4. **Customer Management**
+   ```
+   GET    /api/storefront/[storeId]/profile      # Get profile
+   PATCH  /api/storefront/[storeId]/profile      # Update profile
+   ```
+
+5. **Cart Operations**
+   ```
+   GET    /api/storefront/[storeId]/cart         # Get cart
+   POST   /api/storefront/[storeId]/cart         # Add to cart
+   PATCH  /api/storefront/[storeId]/cart         # Update cart
+   DELETE /api/storefront/[storeId]/cart         # Clear cart
+   ```
+
+6. **Authentication**
+   ```
+   POST /api/storefront/[storeId]/auth/signin    # Sign in
+   POST /api/storefront/[storeId]/auth/signout   # Sign out
+   ```
 
 ### File Relationships and Data Flow
 

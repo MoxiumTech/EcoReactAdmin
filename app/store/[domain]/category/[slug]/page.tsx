@@ -5,6 +5,8 @@ import { type Product } from "@/types/models";
 import { getBaseUrl } from "@/lib/server-utils";
 import { Billboard } from "../../components/billboard";
 import { ProductsGrid } from "../../components/products-grid";
+import { Breadcrumb } from "../../components/breadcrumb";
+import { Heading } from "@/components/ui/heading";
 
 interface CategoryPageProps {
   params: {
@@ -54,21 +56,36 @@ const CategoryPage = async ({ params, searchParams }: CategoryPageProps) => {
   const { products, filters } = await productsRes.json();
   const { sizes, colors, brands } = filters;
 
+  const breadcrumbItems = [
+    ...(taxon.ancestors || []).map((ancestor: any) => ({
+      label: ancestor.name,
+      href: `/category/${ancestor.slug}`
+    })),
+    {
+      label: taxon.name,
+      href: `/category/${taxon.slug}`
+    }
+  ];
+
   return (
-    <div>
+    <div className="container max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <Breadcrumb items={breadcrumbItems} />
+      
       {taxon.billboard && (
-        <div className="mb-8">
+        <div className="mb-8 rounded-lg overflow-hidden shadow-md">
           <Billboard data={taxon.billboard} />
         </div>
       )}
-      <div className="pb-24">
+      
+      <div className="space-y-8">
         <ProductsGrid
-          title={taxon.name}
           items={products}
           sizes={sizes}
           colors={colors}
           brands={brands}
           searchParams={searchParams}
+          title={taxon.name}
+          description={taxon.description || `Browse our collection of ${taxon.name}`}
         />
       </div>
     </div>
