@@ -24,7 +24,8 @@ export async function PATCH(
       customCss,
       logoUrl,
       faviconUrl,
-      themeSettings 
+      themeSettings,
+      currency 
     } = body;
 
     if (!name) {
@@ -72,6 +73,7 @@ export async function PATCH(
         logoUrl: logoUrl ? String(logoUrl) : null,
         faviconUrl: faviconUrl ? String(faviconUrl) : null,
         themeSettings: themeSettings || null,
+        currency: currency || 'USD',
       }
     });
 

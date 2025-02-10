@@ -3,11 +3,11 @@
 import { FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Card } from "@/components/ui/card";
+import { Separator } from "@/components/ui/separator";
 import { UseFormReturn } from "react-hook-form";
 import ImageUpload from "@/components/ui/image-upload";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useState } from "react";
-import { toast } from "react-hot-toast";
 
 interface BannerConfigProps {
   form: UseFormReturn<any>;
@@ -42,10 +42,12 @@ export const BannerConfig = ({
   const currentImageUrl = form.watch("config.imageUrl") || "";
 
   return (
-    <div className="space-y-4">
-      <Card className="p-4">
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+    <div className="space-y-6">
+      {/* Banner Content Section */}
+      <Card className="p-6">
+        <div className="font-medium mb-4">Banner Content</div>
+        <div className="space-y-6">
+          <div className="grid grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="config.title"
@@ -102,23 +104,24 @@ export const BannerConfig = ({
             )}
           />
 
-          <div>
+          <div className="space-y-2">
             <FormLabel>Banner Image</FormLabel>
-            <div className="mt-2">
-              <ImageUpload 
-                value={currentImageUrl ? [currentImageUrl] : []}
-                disabled={uploading}
-                onChange={handleImageChange}
-                onRemove={handleImageRemove}
-              />
-            </div>
+            <ImageUpload 
+              value={currentImageUrl ? [currentImageUrl] : []}
+              disabled={uploading}
+              onChange={handleImageChange}
+              onRemove={handleImageRemove}
+            />
           </div>
         </div>
       </Card>
 
-      <Card className="p-4">
-        <h3 className="text-sm font-medium mb-4">Call to Action</h3>
-        <div className="space-y-4">
+      <Separator />
+
+      {/* Call to Action Section */}
+      <Card className="p-6">
+        <div className="font-medium mb-4">Call to Action</div>
+        <div className="grid grid-cols-2 gap-6">
           <FormField
             control={form.control}
             name="config.callToAction.text"

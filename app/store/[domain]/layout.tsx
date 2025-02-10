@@ -5,6 +5,7 @@ import { Toaster } from "react-hot-toast";
 import { StorefrontChat } from "@/components/storefront/chat/storefront-chat";
 import { getStoreByDomain } from "@/actions/get-store-by-domain";
 import { getCustomerSession } from "@/lib/auth";
+import { StoreSettingsProvider } from "@/hooks/use-store-settings";
 
 export default async function StoreLayout({
   children,
@@ -101,12 +102,13 @@ export default async function StoreLayout({
 
   return (
     <div className="h-full">
-      <ThemeProvider
-        attribute="class"
-        defaultTheme="system"
-        enableSystem
-        disableTransitionOnChange
-      >
+      <StoreSettingsProvider storeId={store.id}>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
         <Toaster />
         <Navbar 
           taxonomies={taxonomies} 
@@ -126,7 +128,8 @@ export default async function StoreLayout({
           </div>
         </footer>
         <StorefrontChat storeId={store.id} customerId={session?.customerId} />
-      </ThemeProvider>
+        </ThemeProvider>
+      </StoreSettingsProvider>
     </div>
   );
 }

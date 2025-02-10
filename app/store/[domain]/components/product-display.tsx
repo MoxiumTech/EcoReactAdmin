@@ -18,13 +18,15 @@ export const ProductDisplay: React.FC<ProductDisplayProps> = ({
 
   return (
     <>
-      <div className="md:sticky md:top-24">
-        <Gallery 
-          images={product.images}
-          variantImages={selectedVariant?.images || []}
-        />
+      <div className="md:sticky md:top-24 h-full">
+        <div className="relative aspect-square md:aspect-auto md:h-[calc(100vh-200px)] overflow-hidden rounded-l-xl">
+          <Gallery 
+            images={product.images}
+            variantImages={selectedVariant?.images || []}
+          />
+        </div>
       </div>
-      <div className="mt-10 px-4 sm:mt-16 sm:px-0 lg:mt-0">
+      <div className="p-6 md:p-8 lg:p-10">
         <ProductInfo 
           product={product}
           onVariantChange={setSelectedVariant}

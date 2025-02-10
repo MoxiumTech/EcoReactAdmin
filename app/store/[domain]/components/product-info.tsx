@@ -77,30 +77,30 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
     : null;
 
   return (
-    <Card className="p-6 space-y-8">
-      {/* Brand name */}
-      {product.brand && (
-        <div className="inline-block bg-gray-100 px-3 py-1 rounded-full">
-          <span className="text-sm text-gray-600">
-            {product.brand.name}
-          </span>
-        </div>
-      )}
-      
-      {/* Product name and price */}
-      <div>
+    <Card className="p-6 space-y-8 bg-white/50 backdrop-blur-sm shadow-sm">
+      <div className="space-y-4">
+        {/* Brand name */}
+        {product.brand && (
+          <div className="inline-block bg-primary/10 px-3 py-1 rounded-full">
+            <span className="text-sm font-medium text-primary">
+              {product.brand.name}
+            </span>
+          </div>
+        )}
+        
+        {/* Product name and price */}
         <h1 className="text-3xl font-bold text-gray-900 mb-4">{product.name}</h1>
         <div className="flex items-baseline gap-4">
-          <span className="text-3xl font-semibold text-gray-900">
+            <span className="text-4xl font-semibold tracking-tight text-gray-900">
             <Currency value={currentPrice} />
           </span>
           {compareAtPrice && (
-            <span className="text-xl text-gray-500 line-through">
+            <span className="text-xl text-gray-400 line-through">
               <Currency value={compareAtPrice} />
             </span>
           )}
           {discount && (
-            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-50 text-red-600 animate-in slide-in-from-right-5 duration-300">
               {discount}% OFF
             </span>
           )}
@@ -125,8 +125,6 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
             {availableVariants.map(variant => {
               const variantInStock = variant.stockItems.some(item => item.count > 0);
               const isSelected = selectedVariant?.id === variant.id;
-              
-              // Just use the variant name
               const variantName = variant.name;
 
               return (
@@ -135,13 +133,13 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
                   onClick={() => handleVariantSelect(variant)}
                   disabled={!variantInStock}
                   className={cn(
-                    "w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200",
+                    "w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 hover:shadow-md",
                     isSelected ? (
-                      "border-black bg-black text-white"
+                      "border-primary bg-primary text-white"
                     ) : variantInStock ? (
-                      "border-gray-200 hover:border-gray-900"
+                      "border-gray-200 hover:border-primary/50 hover:bg-primary/5"
                     ) : (
-                      "border-gray-200 bg-gray-50 text-gray-400 cursor-not-allowed"
+                      "border-gray-200 bg-gray-50/50 text-gray-400 cursor-not-allowed"
                     )
                   )}
                 >
@@ -151,7 +149,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
                     </span>
                     <span className={cn(
                       "text-xs mt-1",
-                      isSelected ? "text-gray-300" : "text-gray-500"
+                      isSelected ? "text-primary-foreground/75" : "text-gray-500"
                     )}>
                       {variantInStock ? "In Stock" : "Out of Stock"}
                     </span>
@@ -175,17 +173,26 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
       )}
 
       {/* Quantity and add to cart */}
-      <div className="space-y-4">
-        <div className="flex items-center justify-between">
-          <h3 className="text-sm font-medium text-gray-900">Quantity</h3>
-          {inStock ? (
-            <span className="text-sm text-green-600 font-medium">In Stock</span>
-          ) : (
-            <span className="text-sm text-red-600 font-medium">Out of Stock</span>
-          )}
+      <div className="space-y-6 pt-2">
+        <div>
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-medium text-gray-900">Quantity</h3>
+            {inStock ? (
+              <span className="text-sm text-green-600 font-medium flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
+                In Stock
+              </span>
+            ) : (
+              <span className="text-sm text-red-600 font-medium flex items-center gap-1.5">
+                <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+                Out of Stock
+              </span>
+            )}
+          </div>
+          <p className="mt-1 text-sm text-gray-500">Choose the quantity you&apos;d like to order</p>
         </div>
         <div className="flex items-center gap-6">
-          <div className="flex items-center border rounded-full">
+          <div className="flex items-center border rounded-full shadow-sm bg-white">
             <button
               onClick={() => handleQuantityChange(quantity - 1)}
               disabled={!inStock || quantity <= 1}
@@ -211,18 +218,21 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
           <Button
             onClick={handleAddToCart}
             disabled={!inStock || addingToCart}
-            className="flex-1 py-6 text-lg transition-all duration-200 relative"
+            className={cn(
+              "flex-1 py-6 text-lg font-medium transition-all duration-300 relative overflow-hidden",
+              addingToCart ? "bg-green-600 hover:bg-green-700" : ""
+            )}
             size="lg"
           >
             <span className={cn(
-              "absolute inset-0 flex items-center justify-center",
-              addingToCart ? "opacity-100" : "opacity-0"
+              "absolute inset-0 flex items-center justify-center bg-green-600 transition-transform duration-300",
+              addingToCart ? "translate-y-0" : "translate-y-full"
             )}>
               Added to Cart!
             </span>
             <span className={cn(
-              "flex items-center justify-center gap-2",
-              addingToCart ? "opacity-0" : "opacity-100"
+              "flex items-center justify-center gap-2 transition-transform duration-300",
+              addingToCart ? "-translate-y-full" : "translate-y-0"
             )}>
               <ShoppingCart size={20} />
               Add to Cart
@@ -232,13 +242,12 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
       </div>
 
       {/* Description */}
-      {/* Description */}
       {product.description && product.description.length > 0 && (
         <div className="border-t pt-8">
-          <h3 className="text-sm font-medium text-gray-900 mb-4">Description</h3>
+          <h3 className="text-sm font-medium text-gray-900 mb-2">Description</h3>
           <div 
-            className="prose prose-sm text-gray-500 max-w-none"
-            dangerouslySetInnerHTML={{ __html: product.description || '' }}
+            className="prose prose-sm text-gray-600 max-w-none prose-headings:font-medium prose-headings:text-gray-900 prose-strong:text-gray-900 prose-a:text-primary hover:prose-a:text-primary/80"
+            dangerouslySetInnerHTML={{ __html: product.description || "" }}
           />
         </div>
       )}

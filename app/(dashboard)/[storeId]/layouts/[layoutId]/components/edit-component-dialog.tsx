@@ -28,7 +28,7 @@ const configSchema = z.object({
     subtitle: z.string().optional(),
     imageUrl: z.string().optional(),
     productIds: z.array(z.string()).optional(),
-    categoryIds: z.array(z.string()).optional(),
+    categoryIds: z.array(z.string()).describe('Taxon IDs to display in the grid').optional(),
     maxItems: z.number().optional(),
     itemsPerRow: z.number().optional(),
     displayStyle: z.string().optional(),
@@ -63,7 +63,7 @@ export default function EditComponentDialog({
 }: EditComponentDialogProps) {
   const router = useRouter();
   const [loading, setLoading] = useState(false);
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Array<{id: string; name: string; price: number}>>([]);
   const [categories, setCategories] = useState<any[]>([]);
   const [loadingData, setLoadingData] = useState(false);
 
@@ -75,7 +75,8 @@ export default function EditComponentDialog({
   });
 
   useEffect(() => {
-    const fetchData = async () => {
+    const maxRetries = 3;
+    const fetchWithRetry = async (retryCount = 0) => {
       if (!isOpen || !component) return;
 
       setLoadingData(true);
@@ -88,28 +89,57 @@ export default function EditComponentDialog({
           const response = await axios.get(`/api/${storeId}/products`, {
             signal: abortController.signal
           });
-          setProducts(response.data);
+          
+          if (!response.data?.success || !Array.isArray(response.data.data)) {
+            throw new Error('Invalid products data format');
+          }
+          
+          setProducts(response.data.data);
         }
         
         if (component.type === "categories") {
-          const response = await axios.get(`/api/${storeId}/categories`, {
-            signal: abortController.signal
-          });
-          setCategories(response.data);
+          try {
+            const response = await axios.get(`/api/${storeId}/taxons`, {
+              signal: abortController.signal,
+              params: {
+                root: true // Get only root level taxons
+              }
+            });
+            
+            if (!response.data || !Array.isArray(response.data)) {
+              throw new Error('Invalid taxons data format');
+            }
+            
+            setCategories(response.data);
+          } catch (error) {
+            if (retryCount < maxRetries) {
+              console.log(`Retrying taxons fetch (${retryCount + 1}/${maxRetries})...`);
+              setTimeout(() => fetchWithRetry(retryCount + 1), 1000 * (retryCount + 1));
+              return;
+            }
+            throw error;
+          }
         }
 
         return () => abortController.abort();
       } catch (error) {
         if (!axios.isCancel(error)) {
           console.error('Error fetching data:', error);
-          toast.error("Failed to load configuration data");
+          const errorMessage = axios.isAxiosError(error) 
+            ? error.response?.data?.message || "Failed to load configuration data"
+            : "Failed to load configuration data";
+          toast.error(errorMessage);
+          
+          if (error instanceof Error) {
+            console.error('Error details:', error.message);
+          }
         }
       } finally {
         setLoadingData(false);
       }
     };
 
-    fetchData();
+    fetchWithRetry();
   }, [isOpen, component, storeId]);
 
   useEffect(() => {

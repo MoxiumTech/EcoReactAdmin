@@ -17,6 +17,7 @@ import qs from "query-string";
 
 interface ProductsGridProps {
   title: string;
+  description?: string;
   items: Product[];
   sizes: Size[];
   colors: Color[];
@@ -36,8 +37,8 @@ interface FilterSectionProps {
 
 const FilterSection: React.FC<FilterSectionProps> = ({ title, children }) => {
   return (
-    <div className="border rounded-lg overflow-hidden">
-      <div className="bg-muted px-4 py-2">
+    <div className="border rounded-lg overflow-hidden bg-card">
+      <div className="bg-muted px-4 py-2 border-b">
         <h4 className="font-medium">{title}</h4>
       </div>
       <div className="divide-y">{children}</div>
@@ -54,6 +55,7 @@ const sortOptions = [
 
 export const ProductsGrid: React.FC<ProductsGridProps> = ({
   title,
+  description,
   items,
   sizes,
   colors,
@@ -77,6 +79,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
       ]);
     }
   }, [items]);
+
   const router = useRouter();
   const search = useSearchParams();
 
@@ -132,15 +135,20 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-24">
+    <div className="w-full">
       {/* Header */}
-      <div className="py-6 border-b mb-6">
+      <div className="py-6 border-b mb-6 bg-white/50 backdrop-blur-sm sticky top-0 z-10">
         <div className="flex items-center justify-between">
-          <h3 className="font-bold text-2xl sm:text-3xl">{title}</h3>
+          <div>
+            <h3 className="font-bold text-2xl sm:text-3xl">{title}</h3>
+            {description && (
+              <p className="mt-2 text-muted-foreground">{description}</p>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             {/* Sort dropdown */}
             <select 
-              className="p-2 border rounded-md bg-white min-w-[200px]"
+              className="p-2 border rounded-md bg-white/50 backdrop-blur-sm min-w-[200px] hover:bg-accent transition-colors focus:outline-none focus:ring-2 focus:ring-primary"
               onChange={(e) => onSortChange(e.target.value)}
               value={searchParams.sort || ""}
             >
@@ -154,7 +162,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
             {/* Mobile filter button */}
             <Dialog open={isFilterOpen} onOpenChange={setIsFilterOpen}>
               <DialogTrigger asChild>
-                <Button variant="outline" size="sm" className="lg:hidden flex items-center gap-2">
+                <Button variant="outline" size="sm" className="lg:hidden flex items-center gap-2 hover:bg-accent/50 transition-colors">
                   <Filter className="h-4 w-4" />
                   Filters
                 </Button>
@@ -162,7 +170,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
               <DialogContent className="w-full sm:max-w-lg">
                 <div className="space-y-6 py-4">
                   <FilterSection title="Price Range">
-                    <div className="px-4 py-2">
+                    <div className="px-4 py-4">
                       <Slider
                         defaultValue={priceRange}
                         min={0}
@@ -181,7 +189,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
                     <RadioGroup
                       defaultValue={searchParams.inStock || "all"}
                       onValueChange={(value: string) => onFilter("inStock", value)}
-                      className="px-4 py-2 space-y-2"
+                      className="px-4 py-4 space-y-2"
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="all" id="all" />
@@ -194,12 +202,61 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
                     </RadioGroup>
                   </FilterSection>
 
-                  <FilterSection title="Categories">
-                    <div className="px-4 py-2">
-                      {/* Add categories here */}
-                      <p className="text-sm text-muted-foreground">Categories coming soon</p>
-                    </div>
-                  </FilterSection>
+                  {sizes.length > 0 && (
+                    <FilterSection title="Sizes">
+                      <div className="px-4 py-4 flex flex-wrap gap-2">
+                        {sizes.map((size) => (
+                          <Button
+                            key={size.id}
+                            onClick={() => onFilter("sizeId", size.id)}
+                            variant={searchParams.sizeId === size.id ? "default" : "outline"}
+                            size="sm"
+                          >
+                            {size.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </FilterSection>
+                  )}
+
+                  {colors.length > 0 && (
+                    <FilterSection title="Colors">
+                      <div className="px-4 py-4 flex flex-wrap gap-2">
+                        {colors.map((color) => (
+                          <Button
+                            key={color.id}
+                            onClick={() => onFilter("colorId", color.id)}
+                            variant={searchParams.colorId === color.id ? "default" : "outline"}
+                            size="sm"
+                            className="flex items-center gap-x-2"
+                          >
+                            <div 
+                              className="h-3 w-3 rounded-full border"
+                              style={{ backgroundColor: color.value }}
+                            />
+                            {color.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </FilterSection>
+                  )}
+
+                  {brands.length > 0 && (
+                    <FilterSection title="Brands">
+                      <div className="px-4 py-4 flex flex-wrap gap-2">
+                        {brands.map((brand) => (
+                          <Button
+                            key={brand.id}
+                            onClick={() => onFilter("brandId", brand.id)}
+                            variant={searchParams.brandId === brand.id ? "default" : "outline"}
+                            size="sm"
+                          >
+                            {brand.name}
+                          </Button>
+                        ))}
+                      </div>
+                    </FilterSection>
+                  )}
                 </div>
               </DialogContent>
             </Dialog>
@@ -217,23 +274,13 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
             searchParams={searchParams}
             onFilter={onFilter}
           />
-          <select 
-            className="p-2 border rounded-md bg-white"
-            onChange={(e) => onSortChange(e.target.value)}
-            value={searchParams.sort || ""}
-          >
-            <option value="">Sort by</option>
-            <option value="price-asc">Price: Low to High</option>
-            <option value="price-desc">Price: High to Low</option>
-            <option value="newest">Newest First</option>
-          </select>
         </div>
+
         {/* Desktop sidebar filters */}
-        {/* Desktop sidebar filters */}
-        <div className="hidden lg:block w-64 flex-shrink-0">
-          <div className="sticky top-20 space-y-6">
+        <div className="hidden lg:block w-72 flex-shrink-0">
+          <div className="sticky top-28 space-y-6 bg-card p-6 rounded-lg shadow-sm border">
             <FilterSection title="Price Range">
-              <div className="px-4 py-2">
+              <div className="px-4 py-4">
                 <Slider
                   defaultValue={priceRange}
                   min={0}
@@ -252,7 +299,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
               <RadioGroup
                 defaultValue={searchParams.inStock || "all"}
                 onValueChange={(value: string) => onFilter("inStock", value)}
-                className="px-4 py-2 space-y-2"
+                className="px-4 py-4 space-y-2"
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="all" id="desktop-all" />
@@ -264,60 +311,61 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
                 </div>
               </RadioGroup>
             </FilterSection>
+
             {sizes.length > 0 && (
-              <div>
-                <h4 className="text-lg font-medium mb-4">Sizes</h4>
-                <div className="flex flex-wrap gap-2">
+              <FilterSection title="Sizes">
+                <div className="px-4 py-4 flex flex-wrap gap-2">
                   {sizes.map((size) => (
                     <Button
                       key={size.id}
                       onClick={() => onFilter("sizeId", size.id)}
                       variant={searchParams.sizeId === size.id ? "default" : "outline"}
+                      size="sm"
                     >
                       {size.name}
                     </Button>
                   ))}
                 </div>
-              </div>
+              </FilterSection>
             )}
 
             {colors.length > 0 && (
-              <div>
-              <h4 className="text-lg font-medium mb-4">Colors</h4>
-              <div className="flex flex-wrap gap-2">
-                {colors.map((color) => (
-                  <Button
-                    key={color.id}
-                    onClick={() => onFilter("colorId", color.id)}
-                    variant={searchParams.colorId === color.id ? "default" : "outline"}
-                    className="flex items-center gap-x-2"
-                  >
-                    <div 
-                      className="h-4 w-4 rounded-full border"
-                      style={{ backgroundColor: color.value }}
-                    />
-                    {color.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
+              <FilterSection title="Colors">
+                <div className="px-4 py-4 flex flex-wrap gap-2">
+                  {colors.map((color) => (
+                    <Button
+                      key={color.id}
+                      onClick={() => onFilter("colorId", color.id)}
+                      variant={searchParams.colorId === color.id ? "default" : "outline"}
+                      size="sm"
+                      className="flex items-center gap-x-2"
+                    >
+                      <div 
+                        className="h-3 w-3 rounded-full border"
+                        style={{ backgroundColor: color.value }}
+                      />
+                      {color.name}
+                    </Button>
+                  ))}
+                </div>
+              </FilterSection>
             )}
             
             {brands.length > 0 && (
-            <div>
-              <h4 className="text-lg font-medium mb-4">Brands</h4>
-              <div className="flex flex-wrap gap-2">
-                {brands.map((brand) => (
-                  <Button
-                    key={brand.id}
-                    onClick={() => onFilter("brandId", brand.id)}
-                    variant={searchParams.brandId === brand.id ? "default" : "outline"}
-                  >
-                    {brand.name}
-                  </Button>
-                ))}
-              </div>
-            </div>
+              <FilterSection title="Brands">
+                <div className="px-4 py-4 flex flex-wrap gap-2">
+                  {brands.map((brand) => (
+                    <Button
+                      key={brand.id}
+                      onClick={() => onFilter("brandId", brand.id)}
+                      variant={searchParams.brandId === brand.id ? "default" : "outline"}
+                      size="sm"
+                    >
+                      {brand.name}
+                    </Button>
+                  ))}
+                </div>
+              </FilterSection>
             )}
           </div>
         </div>
@@ -333,7 +381,7 @@ export const ProductsGrid: React.FC<ProductsGridProps> = ({
               }
             />
           ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6 animate-in fade-in-50 duration-500">
               {items.map((item) => (
                 <ProductCard key={item.id} data={item} />
               ))}
