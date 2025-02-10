@@ -125,25 +125,23 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
             {availableVariants.map(variant => {
               const variantInStock = variant.stockItems.some(item => item.count > 0);
               const isSelected = selectedVariant?.id === variant.id;
-              
-              // Just use the variant name
               const variantName = variant.name;
 
               return (
-              <button
-                key={variant.id}
-                onClick={() => handleVariantSelect(variant)}
-                disabled={!variantInStock}
-                className={cn(
-                  "w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 hover:shadow-md",
-                  isSelected ? (
-                    "border-primary bg-primary text-white"
-                  ) : variantInStock ? (
-                    "border-gray-200 hover:border-primary/50 hover:bg-primary/5"
-                  ) : (
-                    "border-gray-200 bg-gray-50/50 text-gray-400 cursor-not-allowed"
-                  )
-                )}
+                <button
+                  key={variant.id}
+                  onClick={() => handleVariantSelect(variant)}
+                  disabled={!variantInStock}
+                  className={cn(
+                    "w-full flex items-center justify-between p-4 rounded-lg border-2 transition-all duration-200 hover:shadow-md",
+                    isSelected ? (
+                      "border-primary bg-primary text-white"
+                    ) : variantInStock ? (
+                      "border-gray-200 hover:border-primary/50 hover:bg-primary/5"
+                    ) : (
+                      "border-gray-200 bg-gray-50/50 text-gray-400 cursor-not-allowed"
+                    )
+                  )}
                 >
                   <div className="flex flex-col items-start">
                     <span className="text-sm font-medium">
@@ -191,7 +189,7 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
               </span>
             )}
           </div>
-          <p className="mt-1 text-sm text-gray-500">Choose the quantity you'd like to order</p>
+          <p className="mt-1 text-sm text-gray-500">Choose the quantity you&apos;d like to order</p>
         </div>
         <div className="flex items-center gap-6">
           <div className="flex items-center border rounded-full shadow-sm bg-white">
@@ -244,13 +242,12 @@ export const ProductInfo: React.FC<ProductInfoProps> = ({
       </div>
 
       {/* Description */}
-      {/* Description */}
       {product.description && product.description.length > 0 && (
         <div className="border-t pt-8">
           <h3 className="text-sm font-medium text-gray-900 mb-2">Description</h3>
           <div 
             className="prose prose-sm text-gray-600 max-w-none prose-headings:font-medium prose-headings:text-gray-900 prose-strong:text-gray-900 prose-a:text-primary hover:prose-a:text-primary/80"
-            dangerouslySetInnerHTML={{ __html: product.description || '' }}
+            dangerouslySetInnerHTML={{ __html: product.description || "" }}
           />
         </div>
       )}

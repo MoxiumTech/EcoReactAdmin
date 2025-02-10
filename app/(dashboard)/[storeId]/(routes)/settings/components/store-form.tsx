@@ -252,8 +252,8 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                       </FormControl>
                       <FormDescription>
                         {process.env.NODE_ENV === 'development'
-                          ? "Enter only the store name (e.g., 'store1' for store1.lvh.me:3000)"
-                          : "Enter your full domain (e.g., 'store1.yourdomain.com')"}
+                          ? "Enter only the store name (e.g., &apos;store1&apos; for store1.lvh.me:3000)"
+                          : "Enter your full domain (e.g., &apos;store1.yourdomain.com&apos;)"}
                       </FormDescription>
                       {storeDomain && (
                         <Badge variant="secondary" className="mt-2">

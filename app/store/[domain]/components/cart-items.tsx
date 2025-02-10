@@ -54,7 +54,7 @@ const CartItems: React.FC<CartItemsProps> = ({ isPreview }) => {
           <ShoppingBag className="w-12 h-12 text-primary" />
         </div>
         <h2 className="text-2xl font-medium text-gray-900 mb-2">Your cart is empty</h2>
-        <p className="text-gray-500 text-center mb-6">Looks like you haven't added anything to your cart yet</p>
+        <p className="text-gray-500 text-center mb-6">Looks like you haven&apos;t added anything to your cart yet</p>
         <Button asChild size="lg">
           <Link href={`/store/${params.domain}`}>Start Shopping</Link>
         </Button>
