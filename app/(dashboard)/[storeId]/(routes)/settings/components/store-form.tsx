@@ -339,7 +339,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
                       />
                     </FormControl>
                     <FormDescription>
-                      Add custom CSS to customize your store's appearance
+                      Add custom CSS to customize your store&apos;s appearance
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
