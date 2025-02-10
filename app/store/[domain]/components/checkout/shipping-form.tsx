@@ -54,9 +54,9 @@ const paymentMethods: PaymentMethod[] = [
     icon: CreditCard
   },
   {
-    id: "bank_transfer",
-    name: "Bank Transfer",
-    description: "Pay via bank transfer",
+    id: "online_payment",
+    name: "Pay Online",
+    description: "Secure payment via credit card or bank transfer",
     icon: CreditCard
   }
 ];

@@ -130,6 +130,48 @@ export default function CheckoutPage() {
         return;
       }
 
+      if (data.paymentMethod === 'online_payment') {
+        // Create temporary order ID
+        const tempOrderId = `TEMP_${Date.now()}`;
+        
+        // Store order data in session storage for later creation
+        sessionStorage.setItem('pendingOrderData', JSON.stringify({
+          paymentMethod: data.paymentMethod,
+          phone: data.phone,
+          address: data.address,
+          city: data.city,
+          state: data.state,
+          postalCode: data.postalCode,
+          country: data.country,
+          emailDiscount,
+          customerDiscount,
+          couponDiscount
+        }));
+
+        // Create Stripe payment session
+        const origin = window.location.origin;
+        const paymentResponse = await axios.post(`/api/storefront/${cart.storeId}/payment`, {
+          orderData: {
+            id: tempOrderId,
+            finalAmount: finalTotal,
+            cartData: cart.items,
+          },
+          successUrl: `${origin}/store/${domain}/checkout/success?temp_id=${tempOrderId}&session_id={CHECKOUT_SESSION_ID}`,
+          cancelUrl: `${origin}/store/${domain}/checkout?error=payment_cancelled`
+        });
+
+        const { url } = paymentResponse.data;
+        
+        if (!url) {
+          throw new Error("Failed to create payment session");
+        }
+
+        // Redirect to Stripe checkout
+        window.location.href = url;
+        return;
+      }
+
+      // For cash on delivery, create order immediately
       const response = await axios.post(`/api/storefront/${cart.storeId}/checkout`, {
         paymentMethod: data.paymentMethod,
         phone: data.phone,
@@ -140,12 +182,13 @@ export default function CheckoutPage() {
         country: data.country,
         emailDiscount,
         customerDiscount,
-        couponDiscount
+        couponDiscount,
+        isPaid: false,
+        status: 'processing'
       });
 
       const orderId = response.data.id;
       toast.success("Order placed successfully!");
-      
       cart.fetchCart();
       router.push(`/store/${domain}/checkout/success?orderId=${orderId}`);
     } catch (error: any) {

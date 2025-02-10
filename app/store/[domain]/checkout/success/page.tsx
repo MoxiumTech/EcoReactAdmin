@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { CheckCircle2 } from "lucide-react";
@@ -25,42 +26,102 @@ export default function CheckoutSuccessPage() {
   const timeline = useOrderTimeline(order || {} as Order);
 
   useEffect(() => {
-    const fetchOrder = async () => {
-      if (!orderId) {
-        setIsError(true);
-        return;
-      }
-
+    const handleOrder = async () => {
       try {
         setIsLoading(true);
         const customer = await getCurrentCustomer(params.domain as string);
-        
+
         if (!customer) {
           toast.error("Please sign in to view order details");
-          router.push(`/store/${params.domain}/signin?redirect=/store/${params.domain}/checkout/success?orderId=${orderId}`);
+          router.push(`/store/${params.domain}/signin`);
           return;
         }
 
-        const response = await fetch(
-          `/api/storefront/${customer.storeId}/orders/${orderId}`,
-          {
-            credentials: 'include'
+        const tempId = searchParams.get("temp_id");
+        const sessionId = searchParams.get("session_id");
+        const existingOrderId = searchParams.get("orderId");
+
+        // For online payments
+        if (tempId && sessionId) {
+          // Verify payment status
+          const paymentResponse = await fetch(
+            `/api/storefront/${customer.storeId}/payment?session_id=${sessionId}`
+          );
+
+          if (!paymentResponse.ok) {
+            throw new Error("Failed to verify payment");
           }
-        );
 
-        if (response.status === 401) {
-          document.cookie = "customer_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
-          router.push(`/store/${params.domain}/signin?redirect=/store/${params.domain}/checkout/success?orderId=${orderId}`);
+          const paymentData = await paymentResponse.json();
+          
+          if (!paymentData.success) {
+            toast.error("Payment failed. Please try again.");
+            router.push(`/store/${params.domain}/checkout?error=payment_failed`);
+            return;
+          }
+
+          // Get pending order data
+          const pendingOrderData = JSON.parse(sessionStorage.getItem('pendingOrderData') || '{}');
+          
+          // Create the actual order now that payment is confirmed
+          const orderResponse = await axios.post(`/api/storefront/${customer.storeId}/checkout`, {
+            ...pendingOrderData,
+            isPaid: true,
+            status: 'processing'
+          });
+
+          const orderData = orderResponse.data;
+          setOrder(orderData);
+
+          try {
+            // Send order confirmation email for online payments
+            await axios.post(`/api/storefront/${customer.storeId}/orders/${orderData.id}/send-receipt`);
+          } catch (emailError) {
+            console.error('Failed to send confirmation email:', emailError);
+            // Don't show error to user as order was successful
+          }
+
+          sessionStorage.removeItem('pendingOrderData');
           return;
         }
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch order");
+        // For cash on delivery orders or viewing existing orders
+        if (existingOrderId) {
+          const orderResponse = await fetch(
+            `/api/storefront/${customer.storeId}/orders/${existingOrderId}`,
+            { credentials: 'include' }
+          );
+
+          if (!orderResponse.ok) {
+            throw new Error("Failed to fetch order");
+          }
+
+          const data = await orderResponse.json();
+          setOrder(data);
+          return;
         }
 
-        const data = await response.json();
-        setOrder(data);
-        setIsError(false);
+          // Final fallback - try to fetch regular order
+          const response = await fetch(
+            `/api/storefront/${customer.storeId}/orders/${orderId}`,
+            { credentials: 'include' }
+          );
+
+          if (!response.ok) {
+            if (response.status === 401) {
+              document.cookie = "customer_token=; expires=Thu, 01 Jan 1970 00:00:00 GMT; path=/";
+              router.push(`/store/${params.domain}/signin?redirect=/store/${params.domain}/checkout/success?orderId=${orderId}`);
+              return;
+            }
+            throw new Error("Failed to fetch order");
+          }
+
+          const data = await response.json();
+          if (!data) {
+            throw new Error("No order found");
+          }
+
+          setOrder(data);
       } catch (error) {
         console.error("Error fetching order:", error);
         setIsError(true);
@@ -70,7 +131,7 @@ export default function CheckoutSuccessPage() {
       }
     };
 
-    fetchOrder();
+    handleOrder();
   }, [orderId, params.domain, router]);
 
   if (isLoading) {
@@ -120,7 +181,7 @@ export default function CheckoutSuccessPage() {
                 <div className="relative h-24 w-24 rounded-md overflow-hidden">
                   <Image
                     fill
-                    src={item.variant.images[0]?.url || "/placeholder.png"}
+                    src={item.variant?.images?.[0]?.url || "/placeholder.png"}
                     alt={item.variant.product.name}
                     className="object-cover"
                   />
