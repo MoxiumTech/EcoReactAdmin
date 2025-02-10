@@ -174,7 +174,29 @@ const ImageUpload: React.FC<ImageUploadProps> = ({
                 className="object-cover"
               />
               <button
-                onClick={() => onRemove(url)}
+                onClick={async () => {
+                  try {
+                    // Delete from Appwrite storage
+                    const response = await fetch('/api/upload', {
+                      method: 'DELETE',
+                      headers: {
+                        'Content-Type': 'application/json',
+                      },
+                      body: JSON.stringify({ url }),
+                    });
+
+                    if (!response.ok) {
+                      throw new Error('Failed to delete image');
+                    }
+
+                    // Only remove from UI if deletion was successful
+                    onRemove(url);
+                    toast.success('Image deleted successfully');
+                  } catch (error) {
+                    console.error('Error deleting image:', error);
+                    toast.error('Failed to delete image');
+                  }
+                }}
                 className="absolute inset-0 flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity"
                 type="button"
               >

@@ -22,9 +22,14 @@ export const serverStorage = storage;
 export { bucketId };
 export { ID, Permission, Role };
 
-// Image URL masking helper
+// Image URL masking and unmaksing helpers
 export const getMaskedImageUrl = (fileId: string) => {
   return `/api/image-proxy/${fileId}`;
+};
+
+export const getFileIdFromUrl = (url: string): string | null => {
+  const match = url.match(/\/api\/image-proxy\/([^\/\?]+)/);
+  return match ? match[1] : null;
 };
 
 // File preview helpers
