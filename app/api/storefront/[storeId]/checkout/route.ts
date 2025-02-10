@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCustomerSession } from "@/lib/auth";
 import prismadb from "@/lib/prismadb";
 import { Prisma } from "@prisma/client";
+import { sendOrderConfirmationEmail } from "@/lib/mail";
+
 const Decimal = Prisma.Decimal;
 
 export async function POST(
@@ -36,9 +38,8 @@ export async function POST(
       return new NextResponse("All shipping details are required", { status: 400 });
     }
 
-    // Start a transaction to ensure data consistency
     const order = await prismadb.$transaction(async (tx) => {
-      // Get current cart
+      // Get current cart with all necessary data
       const cart = await tx.order.findFirst({
         where: {
           storeId,
@@ -63,18 +64,28 @@ export async function POST(
         throw new Error("Cart is empty");
       }
 
-      // Check stock availability and reserve stock
-      let orderTotal = 0;
-      for (const item of cart.orderItems) {
-        const stockItem = await tx.stockItem.findUnique({
-          where: {
-            variantId_storeId: {
-              variantId: item.variantId,
-              storeId
-            }
+      // Get all stock items at once
+      const stockItems = await tx.stockItem.findMany({
+        where: {
+          storeId,
+          variantId: {
+            in: cart.orderItems.map(item => item.variantId)
           }
-        });
+        }
+      });
 
+      const stockItemMap = new Map(
+        stockItems.map(item => [item.variantId, item])
+      );
+
+      // Validate stock and calculate total
+      let orderTotal = 0;
+      const stockUpdates: Promise<any>[] = [];
+      const stockMovements: Promise<any>[] = [];
+
+      for (const item of cart.orderItems) {
+        const stockItem = stockItemMap.get(item.variantId);
+        
         if (!stockItem) {
           throw new Error(`Stock item not found for variant ${item.variantId}`);
         }
@@ -86,97 +97,72 @@ export async function POST(
 
         orderTotal += Number(item.price) * item.quantity;
 
-        // Create reservation
-        await tx.stockItem.update({
-          where: {
-            id: stockItem.id
-          },
-          data: {
-            reserved: {
-              increment: item.quantity
-            }
-          }
-        });
+        stockUpdates.push(
+          tx.stockItem.update({
+            where: { id: stockItem.id },
+            data: { reserved: { increment: item.quantity } }
+          })
+        );
 
-        // Create stock movement for order placement
-        await tx.stockMovement.create({
-          data: {
-            variantId: item.variantId,
-            stockItemId: stockItem.id,
-            orderId: cart.id,
-            quantity: -item.quantity, // Negative to show stock being taken from available inventory
-            type: "reserved",
-            reason: `Order ${cart.id} - Items reserved for processing`,
-            originatorType: "customer",
-            originatorId: session.customerId
-          }
-        });
+        stockMovements.push(
+          tx.stockMovement.create({
+            data: {
+              variantId: item.variantId,
+              stockItemId: stockItem.id,
+              orderId: cart.id,
+              quantity: -item.quantity,
+              type: "reserved",
+              reason: `Order ${cart.id} - Items reserved for processing`,
+              originatorType: "customer",
+              originatorId: session.customerId
+            }
+          })
+        );
       }
 
-      // Get active customer promotions
+      // Execute all stock updates in parallel
+      await Promise.all([...stockUpdates, ...stockMovements]);
+
+      // Get active promotions
       const customerPromotions = await tx.promotion.findMany({
         where: {
           customers: {
-            some: {
-              id: session.customerId
-            }
+            some: { id: session.customerId }
           },
           storeId,
           isActive: true,
-          startDate: {
-            lte: new Date()
-          },
-          endDate: {
-            gte: new Date()
-          }
+          startDate: { lte: new Date() },
+          endDate: { gte: new Date() }
         }
       });
 
-      // Calculate order total and individual discounts
+      // Calculate totals
       const orderTotalDecimal = new Decimal(orderTotal);
-      
-      // Convert percentage discounts to decimals
-      const emailDiscountDecimal = new Decimal(emailDiscount || 0).div(100);
-      const customerDiscountDecimal = new Decimal(customerDiscount || 0).div(100);
-      const couponDiscountDecimal = new Decimal(couponDiscount || 0).div(100);
-      
-      // Calculate discount amounts
-      const emailDiscountAmount = orderTotalDecimal.mul(emailDiscountDecimal);
-      const customerDiscountAmount = orderTotalDecimal.mul(customerDiscountDecimal);
-      const couponDiscountAmount = orderTotalDecimal.mul(couponDiscountDecimal);
-      
-      // Calculate final amount
-      const totalDiscountAmount = emailDiscountAmount
-        .plus(customerDiscountAmount)
-        .plus(couponDiscountAmount);
-      const finalTotal = orderTotalDecimal.minus(totalDiscountAmount);
+      const emailDiscountAmount = orderTotalDecimal.mul(new Decimal(emailDiscount || 0).div(100));
+      const customerDiscountAmount = orderTotalDecimal.mul(new Decimal(customerDiscount || 0).div(100));
+      const couponDiscountAmount = orderTotalDecimal.mul(new Decimal(couponDiscount || 0).div(100));
+      const finalTotal = orderTotalDecimal
+        .minus(emailDiscountAmount)
+        .minus(customerDiscountAmount)
+        .minus(couponDiscountAmount);
 
-      // Create initial order status records
-      await tx.orderStatusHistory.createMany({
-        data: [
-          {
-            orderId: cart.id,
-            status: "cart",
-            originatorId: session.customerId,
-            originatorType: 'customer',
-            reason: "Order created in cart"
-          },
-          {
-            orderId: cart.id,
-            status: "processing",
-            originatorId: session.customerId,
-            originatorType: 'customer',
-            reason: "Order placed successfully and payment received"
-          }
-        ]
+      // Create order status records
+      await tx.orderStatusHistory.create({
+        data: {
+          orderId: cart.id,
+          status: "processing",
+          originatorId: session.customerId,
+          originatorType: 'customer',
+          reason: `Order placed via ${paymentMethod}`
+        }
       });
 
-      // Update all order details in a single operation
+      // Update order
       const updatedOrder = await tx.order.update({
         where: { id: cart.id },
         data: {
           status: "processing",
-          isPaid: true,
+          isPaid: paymentMethod !== "cash_on_delivery",
           phone,
           address: `${address}, ${city}, ${state} ${postalCode}, ${country}`,
           promotions: {
@@ -198,20 +184,13 @@ export async function POST(
               }
             }
           },
-          statusHistory: {
-            orderBy: {
-              createdAt: 'desc'
-            }
-          },
-          stockMovements: {
-            orderBy: {
-              createdAt: 'desc'
-            }
-          }
+          customer: true,
+          statusHistory: true,
+          stockMovements: true
         }
       });
 
-      // Create a new cart for the customer
+      // Create new cart
       await tx.order.create({
         data: {
           storeId,
@@ -221,7 +200,12 @@ export async function POST(
       });
 
       return updatedOrder;
+    }, {
+      timeout: 10000 // 10 second timeout
     });
+
+    // Send order confirmation email
+    await sendOrderConfirmationEmail(order);
 
     return NextResponse.json(order);
   } catch (error) {
@@ -251,7 +235,6 @@ export async function GET(
       return new NextResponse("Unauthorized", { status: 401 });
     }
 
-    // If orderId is provided, return specific order details
     if (orderId) {
       const order = await prismadb.order.findFirst({
         where: {
@@ -269,7 +252,8 @@ export async function GET(
                 }
               }
             }
-          }
+          },
+          customer: true
         }
       });
 
@@ -277,10 +261,9 @@ export async function GET(
         return new NextResponse("Order not found", { status: 404 });
       }
 
-      return NextResponse.json([order]);
+      return NextResponse.json(order);
     }
 
-    // Otherwise return all orders except cart
     const orders = await prismadb.order.findMany({
       where: {
         storeId,
@@ -299,7 +282,8 @@ export async function GET(
               }
             }
           }
-        }
+        },
+        customer: true
       },
       orderBy: {
         createdAt: 'desc'
