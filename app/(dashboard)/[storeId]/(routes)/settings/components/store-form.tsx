@@ -1,7 +1,7 @@
 'use client';
 
 import * as z from "zod";
-import { Trash, ExternalLink, Globe, PaintBucket, Image as ImageIcon, Shield, DollarSign } from "lucide-react";
+import { Trash, ExternalLink, Globe, PaintBucket, Image as ImageIcon, Shield, DollarSign, Download, Monitor } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
@@ -360,6 +360,46 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           </div>
         </form>
       </Form>
+      <Separator className="my-4" />
+      
+      <Card className="p-6 space-y-4">
+        <div className="flex items-center gap-2">
+          <div className="p-2 bg-primary/10 rounded-lg">
+            <Monitor className="h-4 w-4 text-primary" />
+          </div>
+          <h2 className="text-lg font-medium">Desktop Application</h2>
+        </div>
+        <p className="text-sm text-muted-foreground">
+          Download our desktop application for a better experience with enhanced features and offline capabilities.
+        </p>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <Button 
+            variant="outline" 
+            className="w-full flex items-center gap-2"
+            onClick={() => window.open('/dist/Moxium Admin-0.1.0-arm64.dmg')}
+          >
+            <Download className="h-4 w-4" />
+            Download for macOS
+          </Button>
+          <Button 
+            variant="outline"
+            className="w-full flex items-center gap-2"
+            onClick={() => window.open('/dist/Moxium Admin Setup 0.1.0.exe')}
+          >
+            <Download className="h-4 w-4" />
+            Download for Windows
+          </Button>
+          <Button 
+            variant="outline"
+            className="w-full flex items-center gap-2"
+            onClick={() => window.open('/dist/Moxium Admin-0.1.0-arm64.AppImage')}
+          >
+            <Download className="h-4 w-4" />
+            Download for Linux
+          </Button>
+        </div>
+      </Card>
+
       <Separator className="my-4" />
       <ApiAlert 
         title="NEXT_PUBLIC_API_URL" 

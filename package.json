@@ -1,6 +1,7 @@
 {
   "name": "next13-ecommerce-admin",
   "version": "0.1.0",
+  "author": "Jaya Raj Srivathsav Adari <ajsrivathsav352002@gmail.com>",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -8,7 +9,11 @@
     "start": "next start",
     "lint": "next lint",
     "postinstall": "prisma generate",
-    "seed": "ts-node prisma/migrations/seed.ts"
+    "seed": "ts-node prisma/migrations/seed.ts",
+    "electron-dev": "cross-env NODE_ENV=development ts-node electron/dev.ts",
+    "electron-build": "ts-node electron/build.ts",
+    "electron-start": "electron build/electron/main.js",
+    "electron-package": "cross-env NODE_ENV=production electron-builder build --mac"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.1.1",
@@ -46,6 +51,7 @@
     "clsx": "^1.2.1",
     "cmdk": "^0.2.0",
     "date-fns": "^2.30.0",
+    "dotenv": "^16.4.7",
     "embla-carousel-react": "^8.5.2",
     "eslint": "8.42.0",
     "eslint-config-next": "13.4.5",
@@ -85,10 +91,56 @@
     "@types/bcryptjs": "^2.4.6",
     "@types/jsonwebtoken": "^9.0.7",
     "@types/nodemailer": "^6.4.17",
+    "concurrently": "^9.1.2",
+    "electron": "^34.1.1",
+    "electron-builder": "^25.1.8",
+    "electron-is-dev": "^3.0.1",
+    "electron-reload": "^2.0.0-alpha.1",
     "prisma": "^6.2.1",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "wait-on": "^8.0.2"
   },
   "prisma": {
     "seed": "ts-node --compiler-options {\"module\":\"CommonJS\"} prisma/migrations/seed.ts"
+  },
+  "main": "build/electron/main.js",
+  "build": {
+    "appId": "com.moxium.admin",
+    "productName": "Moxium Admin",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*",
+      ".next/**/*",
+      "node_modules/**/*",
+      ".env",
+      ".env.production",
+      "prisma/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.business",
+      "icon": "public/favicon.ico"
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ],
+      "icon": "public/favicon.ico"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "icon": "public/favicon.ico"
+    },
+    "publish": null,
+    "extraResources": [
+      {
+        "from": ".env.production",
+        "to": "resources/.env.production"
+      }
+    ]
   }
 }
