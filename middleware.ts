@@ -39,7 +39,7 @@ export async function middleware(request: NextRequest) {
 
     // Log every path exclusion check
     const isNextInternal = pathname.startsWith('/_next');
-    const isStatic = pathname.startsWith('/static');
+    const isStatic = pathname.startsWith('/static') || pathname.startsWith('/dist');
     const isApi = pathname.startsWith('/api');
     const isFavicon = pathname.startsWith('/favicon.ico');
     const isAcceptInvite = pathname.startsWith('/accept-invite');
@@ -117,19 +117,29 @@ export async function middleware(request: NextRequest) {
 
     // Handle admin domain requests
     if (isAdminDomain) {
-      // Allow access to auth pages and accept invite
-      if (authRoutes.includes(pathname)) {
-        return NextResponse.next();
-      }
-
-      // Check admin auth for dashboard routes
       const adminToken = request.cookies.get('admin_token')?.value;
       const isPublic = publicRoutes.includes(pathname);
+      const isRoot = pathname === '/';
 
+      // If user is already logged in and trying to access root or auth pages
+      if (adminToken && (isRoot || authRoutes.includes(pathname))) {
+        try {
+          const session = await verifyJWT(adminToken);
+          if (session && session.role === 'admin') {
+            // Redirect to overview page if token is valid
+            return NextResponse.redirect(new URL('/overview', request.url));
+          }
+        } catch (error) {
+          // Invalid token, continue with normal flow
+        }
+      }
+
+      // Handle non-authenticated access
       if (!adminToken && !isPublic) {
         return NextResponse.redirect(new URL('/signin', request.url));
       }
 
+      // Verify token for protected routes
       if (adminToken && !isPublic) {
         try {
           const session = await verifyJWT(adminToken);
@@ -150,19 +160,24 @@ export async function middleware(request: NextRequest) {
     if (isRootDomain) {
       const adminToken = request.cookies.get('admin_token')?.value;
 
+      // If on root domain and has valid admin token, redirect to admin overview
       if (adminToken) {
         try {
           const session = await verifyJWT(adminToken);
           if (session && session.role === 'admin') {
-            // Token verification successful, redirect to admin domain
-            const redirectUrl = new URL(`http://${process.env.ADMIN_DOMAIN}/overview`);
-            return NextResponse.redirect(redirectUrl);
+            // Token verification successful, redirect to admin domain overview
+            const adminUrl = new URL(`http://${process.env.ADMIN_DOMAIN}/overview`);
+            return NextResponse.redirect(adminUrl);
           }
         } catch (error) {
-          // Invalid token, show landing page
-          return NextResponse.next();
+          // Clear invalid token
+          const response = NextResponse.next();
+          response.cookies.delete('admin_token');
+          return response;
         }
       }
+
+      // If no token or invalid token, show landing page
       return NextResponse.next();
     }
 
@@ -223,6 +238,6 @@ export async function middleware(request: NextRequest) {
 
 export const config = {
   matcher: [
-    '/((?!_next|static|_vercel|favicon.ico|sitemap.xml).*)',
+    '/((?!_next|static|dist|_vercel|favicon.ico|sitemap.xml).*)',
   ],
 };
