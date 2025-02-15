@@ -36,8 +36,10 @@ export const getGraphCustomers = async (storeId: string) => {
   let runningTotal = 0;
   const graphData = months.map(({ monthIndex }, i) => {
     runningTotal += customersByMonth[i];
+    const year =  new Date().getFullYear();
     return {
-      name: new Date(2024, monthIndex).toLocaleString('default', { month: 'short' }),
+    
+      name: new Date(year, monthIndex).toLocaleString('default', { month: 'short' }),
       total: runningTotal
     };
   });

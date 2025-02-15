@@ -104,7 +104,7 @@ export function LandingFooter() {
         </div>
         <div className="mt-12 pt-8 border-t">
           <p className="text-center text-sm text-muted-foreground">
-            © 2024 Moxium. All rights reserved.
+            © {new Date().getFullYear()} Moxium. All rights reserved.
           </p>
         </div>
       </div>
