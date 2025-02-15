@@ -111,7 +111,8 @@ const HomePage = async ({
   });
   
   if (!layoutRes.ok) {
-    throw new Error('Failed to fetch layout');
+
+    return null;
   }
 
   const activeLayout = await layoutRes.json();

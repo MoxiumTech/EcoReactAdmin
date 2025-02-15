@@ -30,6 +30,7 @@ export async function POST(
           data: {
             name: `${name}'s Store`,
             userId: user.id,
+            domain: `${name.toLowerCase().replace(/\s/g, '-')}-store`
           }
         });
         console.log('[SIGNUP] Store created successfully:', newStore.id);
