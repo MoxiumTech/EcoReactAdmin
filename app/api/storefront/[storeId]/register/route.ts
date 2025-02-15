@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import { 
   getAuthCookie, 
-  generateCustomerToken, 
+  generateCustomerTokens, 
   getCustomerByEmail, 
   createCustomer 
 } from "@/lib/auth";
@@ -39,18 +39,34 @@ export async function POST(
     // Create new customer
     const customer = await createCustomer(email, password, storeId, name);
 
-    // Generate token
-    const token = generateCustomerToken(customer);
+    // Generate tokens
+    const { accessToken, refreshToken } = await generateCustomerTokens({
+      id: customer.id,
+      email: customer.email,
+      storeId: customer.storeId
+    });
 
-    // Set cookie
+    // Set cookies
     const cookieStore = cookies();
-    const cookieConfig = getAuthCookie(token, 'customer');
-    cookieStore.set(cookieConfig.name, cookieConfig.value, {
-      httpOnly: cookieConfig.httpOnly,
-      secure: cookieConfig.secure,
-      sameSite: cookieConfig.sameSite as 'lax',
-      path: cookieConfig.path,
-      expires: cookieConfig.expires
+    
+    // Set access token cookie
+    const accessTokenConfig = getAuthCookie(accessToken, 'customer');
+    cookieStore.set(accessTokenConfig.name, accessTokenConfig.value, {
+      httpOnly: accessTokenConfig.httpOnly,
+      secure: accessTokenConfig.secure,
+      sameSite: accessTokenConfig.sameSite as 'lax',
+      path: accessTokenConfig.path,
+      expires: accessTokenConfig.expires
+    });
+
+    // Set refresh token cookie
+    const refreshTokenConfig = getAuthCookie(refreshToken, 'customer', true);
+    cookieStore.set(refreshTokenConfig.name, refreshTokenConfig.value, {
+      httpOnly: refreshTokenConfig.httpOnly,
+      secure: refreshTokenConfig.secure,
+      sameSite: refreshTokenConfig.sameSite as 'lax',
+      path: refreshTokenConfig.path,
+      expires: refreshTokenConfig.expires
     });
 
     // Create initial cart for customer

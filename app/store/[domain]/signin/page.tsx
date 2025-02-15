@@ -72,6 +72,9 @@ export default function CustomerSignInPage({ params }: CustomerSignInPageProps) 
         toast.success('Welcome back!');
         router.refresh(); // Refresh server components
 
+        // Dispatch auth state change event
+        window.dispatchEvent(new Event('auth-state-change'));
+
         // Check for redirect parameter
         const redirect = searchParams.get('redirect');
         router.replace(redirect || `/store/${params.domain}`);
