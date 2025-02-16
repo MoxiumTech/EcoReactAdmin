@@ -41,7 +41,26 @@ export async function POST(
       storeId
     });
 
-    // Set cookies
+    // Check if request is from mobile app
+    const userAgent = req.headers.get('user-agent') || '';
+    const isMobileApp = userAgent.includes('Expo') || req.headers.get('x-mobile-app') === 'true';
+
+    if (isMobileApp) {
+      // For mobile app, return tokens in response
+      return NextResponse.json({
+        user: {
+          id: customer.id,
+          name: customer.name,
+          email: customer.email
+        },
+        tokens: {
+          accessToken,
+          refreshToken
+        }
+      });
+    }
+
+    // For web app, set tokens as cookies
     const cookieStore = cookies();
     const host = req.headers.get('host');
     
@@ -73,6 +92,7 @@ export async function POST(
     }
     cookieStore.set(refreshCookie.name, refreshCookie.value, refreshCookieOptions);
 
+    // Return customer data only for web app
     return NextResponse.json({
       customer: {
         id: customer.id,
