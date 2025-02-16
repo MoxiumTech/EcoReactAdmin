@@ -1,7 +1,7 @@
 'use client';
 
 import * as z from "zod";
-import { Trash, ExternalLink, Globe, PaintBucket, Image as ImageIcon, Shield, DollarSign, Download, Monitor } from "lucide-react";
+import { Trash, ExternalLink, Globe, PaintBucket, Image as ImageIcon, Shield, DollarSign, Download, Monitor, Smartphone, Loader2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useState } from "react";
@@ -66,6 +66,7 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
   const [loading, setLoading] = useState(false);
   const [testDataOpen, setTestDataOpen] = useState(false);
   const [testDataLoading, setTestDataLoading] = useState(false);
+  const [generatingApps, setGeneratingApps] = useState(false);
 
   const form = useForm<SettingsFormValues>({
     resolver: zodResolver(formSchema),
@@ -89,6 +90,18 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
       toast.error('Something went wrong.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const generateApps = async () => {
+    try {
+      setGeneratingApps(true);
+      await axios.post(`/api/${params.storeId}/generate-apps`);
+      toast.success('Mobile apps generated successfully.');
+    } catch (error) {
+      toast.error('Error generating mobile apps.');
+    } finally {
+      setGeneratingApps(false);
     }
   };
 
@@ -367,36 +380,78 @@ export const SettingsForm: React.FC<SettingsFormProps> = ({
           <div className="p-2 bg-primary/10 rounded-lg">
             <Monitor className="h-4 w-4 text-primary" />
           </div>
-          <h2 className="text-lg font-medium">Desktop Application</h2>
+          <h2 className="text-lg font-medium">Store Apps</h2>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Download our desktop application for a better experience with enhanced features and offline capabilities.
-        </p>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Button 
-            variant="outline" 
-            className="w-full flex items-center gap-2"
-            onClick={() => window.open('/dist/Moxium Admin-0.1.0-arm64.dmg')}
-          >
-            <Download className="h-4 w-4" />
-            Download for macOS
-          </Button>
-          <Button 
-            variant="outline"
-            className="w-full flex items-center gap-2"
-            onClick={() => window.open('/dist/Moxium Admin Setup 0.1.0.exe')}
-          >
-            <Download className="h-4 w-4" />
-            Download for Windows
-          </Button>
-          <Button 
-            variant="outline"
-            className="w-full flex items-center gap-2"
-            onClick={() => window.open('/dist/Moxium Admin-0.1.0-arm64.AppImage')}
-          >
-            <Download className="h-4 w-4" />
-            Download for Linux
-          </Button>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Monitor className="h-4 w-4 text-primary" />
+              </div>
+              <h3 className="font-medium">Desktop Application</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Download our desktop application for enhanced features and offline capabilities.
+            </p>
+            <div className="grid grid-cols-1 gap-2">
+              <Button
+                variant="outline"
+                className="w-full flex items-center gap-2"
+                onClick={() => window.open('/dist/Moxium Admin-0.1.0-arm64.dmg')}
+              >
+                <Download className="h-4 w-4" />
+                Download for macOS
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full flex items-center gap-2"
+                onClick={() => window.open('/dist/Moxium Admin Setup 0.1.0.exe')}
+              >
+                <Download className="h-4 w-4" />
+                Download for Windows
+              </Button>
+              <Button
+                variant="outline"
+                className="w-full flex items-center gap-2"
+                onClick={() => window.open('/dist/Moxium Admin-0.1.0-arm64.AppImage')}
+              >
+                <Download className="h-4 w-4" />
+                Download for Linux
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="p-2 bg-primary/10 rounded-lg">
+                <Smartphone className="h-4 w-4 text-primary" />
+              </div>
+              <h3 className="font-medium">Mobile Apps</h3>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Generate native mobile apps for your store using Expo framework.
+            </p>
+            <div className="space-y-2">
+              <Button
+                variant="default"
+                className="w-full flex items-center gap-2"
+                onClick={generateApps}
+                disabled={generatingApps}
+              >
+                {generatingApps ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Smartphone className="h-4 w-4" />
+                )}
+                {generatingApps ? 'Generating Apps...' : 'Generate Mobile Apps'}
+              </Button>
+              {storeDomain && (
+                <p className="text-xs text-muted-foreground">
+                  Apps will be configured to use API endpoint: {storeDomain}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
       </Card>
 
