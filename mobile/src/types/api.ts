@@ -65,15 +65,18 @@ export interface User {
 export interface AuthTokens {
   accessToken: string;
   refreshToken: string;
+  domain?: string;
 }
 
 export interface LoginResponse {
   user: User;
   tokens: AuthTokens;
+  domain?: string;
 }
 
 export interface RefreshTokenResponse {
   accessToken: string;
+  domain?: string;
 }
 
 export interface StoreDetails {

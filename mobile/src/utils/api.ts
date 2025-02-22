@@ -98,9 +98,16 @@ api.interceptors.response.use(
           throw new Error('No refresh token available');
         }
 
-        const response = await api.post<RefreshTokenResponse>(
-          endpoint('/auth/refresh'),
-          { refreshToken }
+        // Get new tokens from server
+        const response = await axios.post<{ accessToken: string }>(
+          `${apiBaseUrl}/auth/refresh`,
+          { refreshToken },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'x-store-id': storeId,
+            },
+          }
         );
 
         const { accessToken } = response.data;
@@ -187,10 +194,17 @@ export const removeFromCart = (id: string) =>
 
 // Auth APIs
 export const login = async (email: string, password: string) => {
-  const response = await api.post<LoginResponse>(endpoint('/auth/signin'), { 
-    email, 
-    password 
-  });
+  // Use raw axios to bypass the interceptor for login
+  const response = await axios.post<LoginResponse>(
+    `${apiBaseUrl}/api/storefront/${storeId}/auth/signin`,
+    { email, password },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-store-id': storeId,
+      },
+    }
+  );
 
   if (!response.data.user || !response.data.tokens) {
     throw new Error('Invalid response from server');
@@ -209,11 +223,16 @@ export const login = async (email: string, password: string) => {
 };
 
 export const register = async (email: string, password: string, name: string) => {
-  const response = await api.post<LoginResponse>(endpoint('/auth/register'), {
-    email,
-    password,
-    name
-  });
+  const response = await axios.post<LoginResponse>(
+    `${apiBaseUrl}/api/storefront/${storeId}/auth/register`,
+    { email, password, name },
+    {
+      headers: {
+        'Content-Type': 'application/json',
+        'x-store-id': storeId,
+      },
+    }
+  );
 
   if (!response.data.user || !response.data.tokens) {
     throw new Error('Invalid response from server');
@@ -226,6 +245,7 @@ export const register = async (email: string, password: string, name: string) =>
     AsyncStorage.setItem(AUTH_STORAGE_KEYS.REFRESH_TOKEN, tokens.refreshToken)
   ]);
 
+  api.defaults.headers.Authorization = `Bearer ${tokens.accessToken}`;
   api.defaults.headers.common['Authorization'] = `Bearer ${tokens.accessToken}`;
   return response;
 };

@@ -1,6 +1,6 @@
 import { ExpoConfig, ConfigContext } from 'expo/config';
 
-export default ({ config }: ConfigContext): ExpoConfig => ({
+const getConfig = ({ config }: ConfigContext): ExpoConfig => ({
   ...config,
   name: "Store App",
   slug: "store-app",
@@ -39,3 +39,5 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
     apiTimeout: 30000,
   }
 });
+
+export default getConfig;
